@@ -1,15 +1,16 @@
-import shapeless.{HList, Coproduct, ::, :+:, HNil, CNil}
+import shapeless._
 
 trait Leaves[L] {
-  type Repr <: HList
+  type Out <: HList
 }
 
-trait LeavesLowerPriority {
-  type Copro = Coproduct // For source code alignment...
-  type Aux[L, R0 <: HList] = Leaves[L] { type Repr = R0 }
-  val empty = new Leaves[HNil] { type Repr = HNil }
-  def aux[L, R0 <: HList] = empty.asInstanceOf
-  
+trait LeavesCandies {
+  type Aux[L, R0 <: HList] = Leaves[L] { type Out = R0 }
+  protected type Copro = Coproduct
+  protected def aux[L, R0 <: HList]: Aux[L, R0] = new Leaves[L] { type Out = R0 }
+}
+
+trait LeavesLowerPriority extends LeavesCandies {
   implicit def hCons[H, T <: HList, R <: HList](implicit t: Aux[T, R]): Aux[H ::  T, H :: R] = aux
   implicit def cCons[H, T <: Copro, R <: HList](implicit t: Aux[T, R]): Aux[H :+: T, H :: R] = aux
 }
@@ -30,10 +31,10 @@ object Leaves extends LeavesLowPriority {
   implicit def ccNil[L <: Copro, R <: HList](implicit h: Aux[L, R]): Aux[CNil :+: L, R] = aux
 }
 
-// object LeavesTest {
-//   type TestTree = Int :: (Double :: (Boolean :+: Byte :+: CNil) :: HNil) :: String :: HNil
-//   type Expected = Int :: Double :: Boolean :: Byte :: String :: HNil
+object LeavesTest {
+  type TestTree = Int :: (Double :: (Boolean :+: Byte :+: CNil) :: HNil) :: String :: HNil
+  type Expected = Int :: Double :: Boolean :: Byte :: String :: HNil
   
-//   val leafs = the[Leaves[TestTree]]
-//   implicitly[leafs.Repr =:= Expected]
-// }
+  val leafs = the[Leaves[TestTree]]
+  implicitly[leafs.Out =:= Expected]
+}

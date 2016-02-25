@@ -2,7 +2,7 @@ scalaVersion := "2.11.7"
 
 libraryDependencies := Seq(
   "com.github.mpilquist" %% "simulacrum" % "0.7.0",
-  "com.chuusai" %% "shapeless" % "2.2.5",
+  "com.chuusai" %% "shapeless" % "2.3.1-SNAPSHOT",
   "org.typelevel" %% "cats" % "0.4.1"
 )
 
