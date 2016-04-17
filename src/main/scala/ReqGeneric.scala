@@ -17,17 +17,17 @@ object ReqGeneric {
   implicit def ccons[H, HR, T <: Copro, TR <: Copro](implicit h: Aux[H, HR], t: Lazy[Aux[T, TR]]): Aux[H :+: T, HR :+: TR] = aux
 }
 
-sealed trait AABB
-case class AA(a: String) extends AABB
-case class BB(a: String) extends AABB
-case class DAABB(d: Double, aabb: AABB)
-case class IDAABBS(i: Int, daabb: DAABB, s: String)
+object ReqGenericTest {
+  sealed trait AABB
+  case class AA(a: String) extends AABB
+  case class BB(a: String) extends AABB
+  case class DAABB(d: Double, aabb: AABB)
+  case class IDAABBS(i: Int, daabb: DAABB, s: String)
 
-object ReqGenericTests {
-  val rg = the[ReqGeneric[IDAABBS]]
-
-  // val a: rg.Repr = ""
-  
-  type Expected = Int :: (Double :: ((String :: HNil) :+: (String :: HNil) :+: CNil) :: HNil) :: String :: HNil
-  implicitly[rg.Repr =:= Expected]
+  object TheTest {
+    val rg = the[ReqGeneric[IDAABBS]]
+    type Expected = Int :: (Double :: ((String :: HNil) :+: (String :: HNil) :+: CNil) :: HNil) :: String :: HNil
+    implicitly[rg.Repr =:= Expected]
+  }
 }
+

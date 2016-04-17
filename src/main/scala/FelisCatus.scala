@@ -11,13 +11,9 @@ import cats.std.all._
   def pure[A](x: A): F[A]
 }
 
-// Not sure about the name, but the idea is to have something like `Cartesian` for `Either`...
-@typeclass trait Cocartesian[F[_]] {
+// `Cartesian` for `Either`...
+@typeclass trait DisjointCartesian[F[_]] {
   def coproduct[A, B](fa: F[A], fb: F[B]): F[Xor[A, B]]
-}
-
-trait Pure[F[_]] {
-  def pure[A](a: A): F[A]
 }
 
 object ShowInstances {
@@ -35,7 +31,7 @@ object ShowInstances {
     }
   }
   
-  implicit val showCocartesian: Cocartesian[Show] = new Cocartesian[Show] {
+  implicit val showDisjointCartesian: DisjointCartesian[Show] = new DisjointCartesian[Show] {
     def coproduct[A, B](fa: Show[A], fb: Show[B]): Show[Xor[A, B]] = new Show[Xor[A, B]] {
       def show(ab: Xor[A, B]): String = ab.fold(fa.show, fb.show)
     }
@@ -50,9 +46,9 @@ case class Dog(name: String, bones: Int) extends Animal
 // case class Cons(hd: Int, l: Lis) extends Lis
 // case object Nal extends Lis
 
-class FelisCatus[C[_]](implicit i: InvariantMonoidal[C], o: Cocartesian[C]) {
+class FelisCatus[C[_]](implicit i: InvariantMonoidal[C], o: DisjointCartesian[C]) {
   import cats.syntax.all._
-  import Cocartesian.ops._
+  import DisjointCartesian.ops._
   
   implicit def deriveGeneric[F, G](implicit g: Generic.Aux[F, G], c: C[G]): C[F] =
     c.imap(g.from)(g.to)
@@ -75,16 +71,15 @@ object FelisCatus {
   def derive[C[_], F] = new DeriveCurried[C, F]
   
   class DeriveCurried[C[_], F] {
-    def apply[G <: HList, L <: HList, LL <: HList, S <: HList]()
+    def apply[G, L <: HList, LL <: HList, S]()
       (implicit
         i: InvariantMonoidal[C],
-        o: Cocartesian[C],
-        g: Generic.Aux[F, G], // TODO: ReqGeneric
-        s: Shadowed.Aux[G, S],
+        o: DisjointCartesian[C],
+        g: ReqGeneric.Aux[F, G],
         l: Leaves.Aux[G, L],
         f: LiftAll.Aux[C, L, LL]
       ): C[F] = {
-        // f.instances.toList
+        // println(s.instances)
         ???
       }
   }
@@ -95,11 +90,12 @@ object Run extends App {
   val felix = Cat("Felix", 2)
   val tigger = Dog("Tigger", 2)
   
-  // val ga = the[Generic[Animal]]
   // val la = the[Leaves[ga.Repr]]
   // val a: la.Out = ""
   // LiftAll[Show, la.Out]
-  // FelisCatus.derive[Show, Cat]()
+  // new FelisCatus.DeriveCurried[Show, Animal]()()
+  
+  FelisCatus.derive[Show, Animal]()
   
   val fc = new FelisCatus[Show]()
   
