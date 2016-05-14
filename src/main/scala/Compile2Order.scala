@@ -3,8 +3,9 @@ package felis.catus
 import cats.arrow.{NaturalTransformation => ~>}
 import cats.Order
 import cats.std.all._
-import felis.catus.Algebra._
-import felis.catus.CatusInstances.orderCatus
+import felis.catus.lib.FreeObjects
+import felis.catus.BaseAlgebra._
+import felis.catus.ObjectsInstances.orderObjects
 
 object Compile2Order {
   def naturalTransformation[M[_]]: BaseAlgebra ~> Order =
@@ -18,13 +19,13 @@ object Compile2Order {
         case DoubleAL (label: String) => implicitly
         case BooleanAL(label: String) => implicitly
 
-        case BigDecimalAL(label: String) =>
-          new Order[BigDecimal] {
-            def compare(x: BigDecimal, y: BigDecimal) = x.compare(y)
-          }
+        // case BigDecimalAL(label: String) =>
+        //   new Order[BigDecimal] {
+        //     def compare(x: BigDecimal, y: BigDecimal) = x.compare(y)
+        //   }
 
-        case ObjectAL(label: String, value: FreeCatus[BaseAlgebra, A]) =>
-          value.foldMap(this)
+        case ObjectAL(label: String, value: FreeObjects[BaseAlgebra, A]) =>
+          value.foldMap(this)(orderObjects)
       }
     }
 }

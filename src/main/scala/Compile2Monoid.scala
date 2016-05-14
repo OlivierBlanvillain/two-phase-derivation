@@ -3,8 +3,9 @@ package felis.catus
 import cats.arrow.{NaturalTransformation => ~>}
 import cats.Monoid
 import cats.std.all._
-import felis.catus.Algebra._
-import felis.catus.CatusInstances.monoidCatus
+import felis.catus.lib.FreeObjects
+import felis.catus.BaseAlgebra._
+import felis.catus.ObjectsInstances.monoidObjects
 
 object Compile2Monoid {
   def naturalTransformation[M[_]]: BaseAlgebra ~> Monoid =
@@ -23,14 +24,14 @@ object Compile2Monoid {
             def combine(x: Boolean, y: Boolean) = x || y
           }
 
-        case BigDecimalAL(label: String) =>
-          new Monoid[BigDecimal] {
-            val empty = BigDecimal(0)
-            def combine(x: BigDecimal, y: BigDecimal) = x + y
-          }
+        // case BigDecimalAL(label: String) =>
+        //   new Monoid[BigDecimal] {
+        //     val empty = BigDecimal(0)
+        //     def combine(x: BigDecimal, y: BigDecimal) = x + y
+        //   }
 
-        case ObjectAL(label: String, value: FreeCatus[BaseAlgebra, A]) =>
-          value.foldMap(this)
+        case ObjectAL(label: String, value: FreeObjects[BaseAlgebra, A]) =>
+          value.foldMap(this)(monoidObjects)
       }
     }
 }

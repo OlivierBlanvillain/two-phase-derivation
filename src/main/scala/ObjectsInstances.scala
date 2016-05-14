@@ -5,9 +5,10 @@ import cats.Eq
 import cats.Monoid
 import cats.Order
 import cats.Show
+import felis.catus.lib.Objects
 
-object CatusInstances {
-  implicit val showCatus: Catus[Show] = new Catus[Show] {
+object ObjectsInstances {
+  val showObjects: Objects[Show] = new Objects[Show] {
     def product[A, B](fa: Show[A], fb: Show[B]): Show[(A, B)] =
       new Show[(A, B)] {
         def show(x: (A, B)): String = fa.show(x._1) + ", " + fb.show(x._2)
@@ -24,7 +25,7 @@ object CatusInstances {
       }
   }
 
-  implicit val orderCatus: Catus[Order] = new Catus[Order] {
+  val orderObjects: Objects[Order] = new Objects[Order] {
     def product[A, B](fa: Order[A], fb: Order[B]): Order[(A, B)] =
       new Order[(A, B)] {
         def compare(x: (A, B), y: (A, B)): Int = {
@@ -50,7 +51,7 @@ object CatusInstances {
       }
   }
 
-  implicit val monoidCatus: Catus[Monoid] = new Catus[Monoid] {
+  val monoidObjects: Objects[Monoid] = new Objects[Monoid] {
     def product[A, B](fa: Monoid[A], fb: Monoid[B]): Monoid[(A, B)] =
       new Monoid[(A, B)] {
         def empty: (A, B) = fa.empty -> fb.empty
@@ -76,7 +77,7 @@ object CatusInstances {
       }
   }
 
-  implicit val eqCatus: Catus[Eq] = new Catus[Eq] {
+  val eqObjects: Objects[Eq] = new Objects[Eq] {
     def product[A, B](fa: Eq[A], fb: Eq[B]): Eq[(A, B)] =
       new Eq[(A, B)] {
         def eqv(x: (A, B), y: (A, B)): Boolean = fa.eqv(x._1, y._1) && fb.eqv(x._2, y._2)

@@ -2,8 +2,9 @@ package felis.catus
 
 import cats.arrow.{NaturalTransformation => ~>}
 import cats.Show
-import felis.catus.Algebra._
-import felis.catus.CatusInstances.showCatus
+import felis.catus.lib.FreeObjects
+import felis.catus.BaseAlgebra._
+import felis.catus.ObjectsInstances.showObjects
 
 object Compile2Show {
   private def mkShow[A](f: A => String): Show[A] =
@@ -21,10 +22,10 @@ object Compile2Show {
         case FloatAL     (label: String) => mkShow(s"$label = ".+)
         case DoubleAL    (label: String) => mkShow(s"$label = ".+)
         case BooleanAL   (label: String) => mkShow(s"$label = ".+)
-        case BigDecimalAL(label: String) => mkShow(s"$label = ".+)
+        // case BigDecimalAL(label: String) => mkShow(s"$label = ".+)
 
-        case ObjectAL(label: String, value: FreeCatus[BaseAlgebra, A]) =>
-          mkShow(x => s"$label = { " + value.foldMap(this).show(x) + " }")
+        case ObjectAL(label: String, value: FreeObjects[BaseAlgebra, A]) =>
+          mkShow(x => s"$label = { " + value.foldMap(this)(showObjects).show(x) + " }")
       }
     }
 }

@@ -1,8 +1,6 @@
-package felis.catus
+package felis.catus.lib
 
-import cats.Cartesian
 import cats.data.Xor
-import cats.functor.Invariant
 import scala.reflect.ClassTag
 import simulacrum.typeclass
 
@@ -17,5 +15,3 @@ object DisjointCartesianSyntax {
       new DisjointCartesianBuilder[F] |#| fa |#| fb
   }
 }
-
-@typeclass trait Catus[F[_]] extends Cartesian[F] with DisjointCartesian[F] with Invariant[F]

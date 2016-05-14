@@ -67,7 +67,7 @@ object Boilerplate {
         }.reduce(_ + " with " + _)
 
       block"""
-        |package felis.catus
+        |package felis.catus.lib
         |
         |object NothingTypeAlias { type N = Nothing }
         |import NothingTypeAlias.N
@@ -129,7 +129,7 @@ object Boilerplate {
         else s"def disjointed(implicit inv: Invariant[F], dis: DisjointCartesian[F]): F[Either${arity}[${`A..N`}]] = inv.imap(${nestedDisjonctions}) { ${xorsCases} } { ${casesXors} }"
 
       block"""
-        |package felis.catus
+        |package felis.catus.lib
         |
         |import cats.functor.Invariant
         |import cats.data.Xor

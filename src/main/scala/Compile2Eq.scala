@@ -3,8 +3,9 @@ package felis.catus
 import cats.arrow.{NaturalTransformation => ~>}
 import cats.Eq
 import cats.std.all._
-import felis.catus.Algebra._
-import felis.catus.CatusInstances.eqCatus
+import felis.catus.lib.FreeObjects
+import felis.catus.BaseAlgebra._
+import felis.catus.ObjectsInstances.eqObjects
 
 object Compile2Eq {
   def naturalTransformation[M[_]]: BaseAlgebra ~> Eq =
@@ -18,13 +19,13 @@ object Compile2Eq {
         case DoubleAL (label: String) => implicitly
         case BooleanAL(label: String) => implicitly
 
-        case BigDecimalAL(label: String) =>
-          new Eq[BigDecimal] {
-            def eqv(x: BigDecimal, y: BigDecimal): Boolean = x == y
-          }
+        // case BigDecimalAL(label: String) =>
+        //   new Eq[BigDecimal] {
+        //     def eqv(x: BigDecimal, y: BigDecimal): Boolean = x == y
+        //   }
 
-        case ObjectAL(label: String, value: FreeCatus[BaseAlgebra, A]) =>
-          value.foldMap(this)
+        case ObjectAL(label: String, value: FreeObjects[BaseAlgebra, A]) =>
+          value.foldMap(this)(eqObjects)
       }
     }
 }
