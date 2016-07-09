@@ -4,7 +4,7 @@ import cats.functor.{Invariant, Contravariant}
 import shapeless._
 import shapeless.ops.hlist.LiftAll
 import simulacrum.typeclass
-import cats.std.all._
+// import cats.std.all._
 
 // See https://github.com/typelevel/cats/pull/845
 @typeclass trait InvariantMonoidal[F[_]] extends Cartesian[F] with Invariant[F] {
@@ -46,7 +46,7 @@ case class Dog(name: String, bones: Int) extends Animal
 // case class Cons(hd: Int, l: Lis) extends Lis
 // case object Nal extends Lis
 
-class Derive[C[_]](implicit i: InvariantMonoidal[C], o: DisjointCartesian[C]) {
+class DeriveFC[C[_]](implicit i: InvariantMonoidal[C], o: DisjointCartesian[C]) {
   import cats.syntax.all._
   import DisjointCartesian.ops._
 
@@ -67,15 +67,15 @@ class Derive[C[_]](implicit i: InvariantMonoidal[C], o: DisjointCartesian[C]) {
     }
 }
 
-object Derive {
-  def derive[C[_], F] = new DeriveCurried[C, F]
+object DeriveFC {
+  def derive[C[_], F] = new DeriveFCCurried[C, F]
 
-  class DeriveCurried[C[_], F] {
+  class DeriveFCCurried[C[_], F] {
     def apply[G, L <: HList, LL <: HList, S]()
       (implicit
         i: InvariantMonoidal[C],
         o: DisjointCartesian[C],
-        g: ReqGeneric.Aux[F, G],
+        // g: ReqGeneric.Aux[F, G],
         l: Leaves.Aux[G, L],
         f: LiftAll.Aux[C, L, LL]
       ): C[F] = {
@@ -85,31 +85,31 @@ object Derive {
   }
 }
 
-object Run extends App {
-  import ShowInstances._
-  val felix = Cat("Felix", 2)
-  val tigger = Dog("Tigger", 2)
+// object Run extends App {
+//   import ShowInstances._
+//   val felix = Cat("Felix", 2)
+//   val tigger = Dog("Tigger", 2)
 
-  // val la = the[Leaves[ga.Repr]]
-  // val a: la.Out = ""
-  // LiftAll[Show, la.Out]
-  // new Derive.DeriveCurried[Show, Animal]()()
+//   // val la = the[Leaves[ga.Repr]]
+//   // val a: la.Out = ""
+//   // LiftAll[Show, la.Out]
+//   // new DeriveFC.DeriveFCCurried[Show, Animal]()()
 
-  Derive.derive[Show, Animal]()
+//   DeriveFC.derive[Show, Animal]()
 
-  val fc = new Derive[Show]()
+//   val fc = new DeriveFC[Show]()
 
-  val showAnimal: Show[Animal] = {
-    import fc._
-    implicitly[Show[Animal]]
-  }
+//   val showAnimal: Show[Animal] = {
+//     import fc._
+//     implicitly[Show[Animal]]
+//   }
 
-  // val showList: Show[Lis] = {
-  //   import fc._
-  //   implicitly[Show[Lis]]
-  // }
-  // val l: Lis = Cons(1, Cons(2, Cons(3, null)))
+//   // val showList: Show[Lis] = {
+//   //   import fc._
+//   //   implicitly[Show[Lis]]
+//   // }
+//   // val l: Lis = Cons(1, Cons(2, Cons(3, null)))
 
-  println(showAnimal.show(felix))
-  println(showAnimal.show(tigger))
-}
+//   println(showAnimal.show(felix))
+//   println(showAnimal.show(tigger))
+// }
