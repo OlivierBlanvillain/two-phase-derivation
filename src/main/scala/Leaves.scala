@@ -1,14 +1,14 @@
 import shapeless._
 
-trait Leaves[L] {
-  type Out <: HList
+trait Leaves[Repr] {
+  type FlatRepr <: HList
 }
 
 trait LeavesCandies {
-  type Aux[L, R0 <: HL] = Leaves[L] { type Out = R0 }
+  type Aux[Repr, R0 <: HL] = Leaves[Repr] { type FlatRepr = R0 }
   protected type HL = HList
   protected type CO = Coproduct
-  protected def aux[L, R0 <: HL]: Aux[L, R0] = new Leaves[L] { type Out = R0 }
+  protected def aux[Repr, R0 <: HL]: Aux[Repr, R0] = new Leaves[Repr] { type FlatRepr = R0 }
 }
 
 trait LeavesLowerPriority extends LeavesCandies {
@@ -37,5 +37,5 @@ object LeavesTest {
   type Expected = Int :: Double :: Boolean :: Byte :: String :: HNil
 
   val leafs = the[Leaves[TestTree]]
-  implicitly[leafs.Out =:= Expected]
+  implicitly[leafs.FlatRepr =:= Expected]
 }

@@ -1,36 +1,48 @@
 import shapeless._
+import shapeless.ops.hlist.{LiftAll, ToTraversable}
 import cats.Show
 import cats.data.Xor
 import cats.implicits._
 import simulacrum.typeclass
+import scala.reflect.runtime.universe.TypeTag
 
-trait Lift[F[_], Repr] {
-  def get[A](implicit f: Felis[F]): F[A]
+trait Lift[F[_], Repr] { self =>
+  def get[A: TypeTag]: F[A]
+
+  def cast[R]: Lift[F, R] =
+    new Lift[F, R] {
+      def get[A: TypeTag]: F[A] = self.get
+    }
 }
 
 object Lift {
-  implicit class HConsLift[F[_], H, T <: HList](self: Lift[F, H :: T]) {
-    def head: Lift[F, H] = new Lift[F, H] {
-      def get[A](implicit f: Felis[F]): F[A] = self.get
-    }
+  implicit def viaLiftAll[F[_], Repr, FlatRepr <: HList, LiftedRepr <: HList, TypeTags <: HList]
+    (implicit
+      le: Leaves.Aux[Repr, FlatRepr],
+      la: LiftAll.Aux[F,       FlatRepr, LiftedRepr],
+      tt: LiftAll.Aux[TypeTag, FlatRepr, TypeTags],
+      ll: ToTraversable.Aux[LiftedRepr, List, F[_]],
+      lt: ToTraversable.Aux[TypeTags,   List, TypeTag[_]]
+    ): Lift[F, Repr] =
+      new Lift[F, Repr] {
+        val map: Map[TypeTag[_], F[_]] =
+          tt.instances.toList[TypeTag[_]].zip(la.instances.toList[F[_]]).toMap
 
-    def tail: Lift[F, T] = new Lift[F, T] {
-      def get[A](implicit f: Felis[F]): F[A] = self.get
-    }
+        println(map)
+
+        def get[A: TypeTag]: F[A] = map(implicitly[TypeTag[A]]).asInstanceOf[F[A]]
+      }
+
+  implicit class HConsLift[F[_], H, T <: HList](self: Lift[F, H :: T]) {
+    def head: Lift[F, H] = self.cast
+    def tail: Lift[F, T] = self.cast
   }
 
   implicit class CConsLift[F[_], H, T <: Coproduct](self: Lift[F, H :+: T]) {
-    def head: Lift[F, H] = new Lift[F, H] {
-      def get[A](implicit f: Felis[F]): F[A] = self.get
-    }
-
-    def tail: Lift[F, T] = new Lift[F, T] {
-      def get[A](implicit f: Felis[F]): F[A] = self.get
-    }
+    def head: Lift[F, H] = self.cast
+    def tail: Lift[F, T] = self.cast
   }
 }
-
-trait Felis[F[_]] extends InvariantMonoidal[F] with DisjointCartesian[F]
 
 trait Derive[T] {
   type Repr
@@ -40,21 +52,20 @@ trait Derive[T] {
 
 object Derive {
   type Aux[T, R0] = Derive[T] { type Repr = R0 }
-  protected def aux[T, R0] = null
 
-  implicit def hbase[T](implicit h: HasNoGeneric[T]): Aux[T, T] = new Derive[T] {
+  implicit def hbase[T: TypeTag](implicit h: HasNoGeneric[T]): Aux[T, T] = new Derive[T] {
     type Repr = T
-    def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[T] = l.get[T]
+    def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[T] = l.get[T]
   }
 
   implicit def hnil: Aux[HNil, HNil] = new Derive[HNil] {
     type Repr = HNil
-    def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[HNil] = f.pure(HNil)
+    def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[HNil] = f.pure(HNil)
   }
 
   implicit def cnil: Aux[CNil, CNil] = new Derive[CNil] {
     type Repr = CNil
-    def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[CNil] = f.pure(null)
+    def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[CNil] = f.pure(null)
   }
 
   implicit def gen[A, G, R]
@@ -63,7 +74,7 @@ object Derive {
       r: Lazy[Aux[G, R]]
     ): Aux[A, R] = new Derive[A] {
       type Repr = R
-      def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[A] =
+      def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[A] =
         r.value.derive[F].imap(g.from)(g.to)
     }
 
@@ -74,7 +85,7 @@ object Derive {
     ): Aux[H :: T, HR :: TR] =
       new Derive[H :: T] {
         type Repr = HR :: TR
-        def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[H :: T] =
+        def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[H :: T] =
           h.derive(f, l.head).product(t.value.derive[F](f, l.tail))
             .imap { case (a, b) => a :: b } { case a :: b => (a, b) }
       }
@@ -87,7 +98,7 @@ object Derive {
       new Derive[H :+: T] {
         import DisjointCartesian.ops._
         type Repr = HR :+: TR
-        def derive[F[_]](implicit f: Felis[F], l: Lift[F, Repr]): F[H :+: T] =
+        def derive[F[_]] (implicit f: Felis[F], l: Lift[F, Repr]): F[H :+: T] =
           h.derive(f, l.head).coproduct(t.value.derive[F](f, l.tail))
             .imap {
               case Xor.Left(a)  => Inl(a)
@@ -99,17 +110,21 @@ object Derive {
       }
 }
 
-object DeriveTest {
-  sealed trait AABB
-  case class AA(a: String) extends AABB
-  case class BB(a: String) extends AABB
-  case class DAABB(d: Double, aabb: AABB)
-  case class IDAABBS(i: Int, daabb: DAABB, s: String)
+sealed trait AABB
+case class AA(a: String) extends AABB
+case class BB(a: String) extends AABB
+case class DAABB(d: Double, aabb: AABB)
+case class IDAABBS(i: Int, daabb: DAABB, s: String)
 
-  object TheTest {
-    val rg = the[Derive[IDAABBS]]
-    type Expected = Int :: (Double :: ((String :: HNil) :+: (String :: HNil) :+: CNil) :: HNil) :: String :: HNil
-    implicitly[rg.Repr =:= Expected]
-  }
+object DeriveTest extends App {
+  val rg = the[Derive[IDAABBS]]
+  type Expected = Int :: (Double :: ((String :: HNil) :+: (String :: HNil) :+: CNil) :: HNil) :: String :: HNil
+  implicitly[rg.Repr =:= Expected]
+
+  import ShowInstances._
+  import cats.std.all._
+
+  val showIDAABBS: Show[IDAABBS] = rg.derive[Show]
+  println(showIDAABBS.show(IDAABBS(1, DAABB(1.1, AA("aa")), "s")))
 }
 

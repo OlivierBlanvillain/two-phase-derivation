@@ -16,8 +16,10 @@ import simulacrum.typeclass
   def coproduct[A, B](fa: F[A], fb: F[B]): F[Xor[A, B]]
 }
 
+trait Felis[F[_]] extends InvariantMonoidal[F] with DisjointCartesian[F]
+
 object ShowInstances {
-  implicit val showInvariantMonoidal: InvariantMonoidal[Show] = new InvariantMonoidal[Show] {
+  implicit val showFelis: Felis[Show] = new Felis[Show] {
     def pure[A](a: A): Show[A] = new Show[A] {
       def show(a: A): String = ""
     }
@@ -29,9 +31,7 @@ object ShowInstances {
     def imap[A, B](fa: Show[A])(f: A => B)(g: B => A): Show[B] = new Show[B] {
       def show(b: B): String = fa.show(g(b))
     }
-  }
 
-  implicit val showDisjointCartesian: DisjointCartesian[Show] = new DisjointCartesian[Show] {
     def coproduct[A, B](fa: Show[A], fb: Show[B]): Show[Xor[A, B]] = new Show[Xor[A, B]] {
       def show(ab: Xor[A, B]): String = ab.fold(fa.show, fb.show)
     }
@@ -76,7 +76,7 @@ object DeriveFC {
         i: InvariantMonoidal[C],
         o: DisjointCartesian[C],
         // g: ReqGeneric.Aux[F, G],
-        l: Leaves.Aux[G, L],
+        // l: Leaves.Aux[G, L],
         f: LiftAll.Aux[C, L, LL]
       ): C[F] = {
         // println(s.instances)
