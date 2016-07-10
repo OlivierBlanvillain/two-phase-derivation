@@ -1,5 +1,6 @@
 import shapeless._
 
+/** `shapeless.ops.hlist.Prepend` extended with a `split` method to reverse the appending. */
 trait Append[P <: HList, S <: HList] extends DepFn2[P, S] with Serializable {
   type Out <: HList
   def split(o: Out): (P, S)
