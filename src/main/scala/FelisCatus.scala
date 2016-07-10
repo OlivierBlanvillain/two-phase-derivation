@@ -21,11 +21,11 @@ trait Felis[F[_]] extends InvariantMonoidal[F] with DisjointCartesian[F]
 object ShowInstances {
   implicit val showFelis: Felis[Show] = new Felis[Show] {
     def pure[A](a: A): Show[A] = new Show[A] {
-      def show(a: A): String = ""
+      def show(a: A): String = "pure"
     }
 
     def product[A, B](fa: Show[A], fb: Show[B]): Show[(A, B)] = new Show[(A, B)] {
-      def show(ab: (A, B)): String = fa.show(ab._1) + ", " + fb.show(ab._2)
+      def show(ab: (A, B)): String = "(" + fa.show(ab._1) + ", " + fb.show(ab._2) + ")"
     }
 
     def imap[A, B](fa: Show[A])(f: A => B)(g: B => A): Show[B] = new Show[B] {
@@ -33,7 +33,7 @@ object ShowInstances {
     }
 
     def coproduct[A, B](fa: Show[A], fb: Show[B]): Show[Xor[A, B]] = new Show[Xor[A, B]] {
-      def show(ab: Xor[A, B]): String = ab.fold(fa.show, fb.show)
+      def show(ab: Xor[A, B]): String = "[case: " + ab.fold(fa.show, fb.show) + "]"
     }
   }
 }
