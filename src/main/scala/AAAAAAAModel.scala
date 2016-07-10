@@ -1,3 +1,5 @@
+// AAAAAAA, hi says after loosing another 30 minutes to SI-7046.
+
 object Model {
   sealed trait AABB
   case class AA(a: String) extends AABB

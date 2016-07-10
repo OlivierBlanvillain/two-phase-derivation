@@ -10,7 +10,7 @@ object Benchmarks extends App {
   val deriveS = the[DeriveS[IDAABBS]]
   val deriveFFlat = deriveF.flatten
 
-  def s(d: => Duration): String = f"        ${d.toNanos / 1E9}%1.4f seconds        |"
+  def s(d: => Duration): String = s"        ${(d.toNanos / 1E9).toString.take(6)} seconds        |"
 
   println("|          Scala Code           | " +     "       Compilation Time       |")
   println("|-------------------------------| " +     "----------------------------- |")
@@ -19,7 +19,7 @@ object Benchmarks extends App {
   println("|`deriveFFlat.materialize[Show]`| " + s(c("deriveFFlat.materialize[Show]")))
   println("|`the[DeriveS[IDAABBS]]        `| " + s(c("the[DeriveS[IDAABBS]]        ")))
   println("|`deriveS.materialize[Show]    `| " + s(c("deriveS.materialize[Show]    ")))
-  println("|`implicitly[TShow[IDAABBS]]   `| " + s(c("implicitly[TShow[IDAABBS]]   ")))
+  println("|`the[TShow[IDAABBS]]          `| " + s(c("the[TShow[IDAABBS]]          ")))
 }
 
 trait TShow[F] {

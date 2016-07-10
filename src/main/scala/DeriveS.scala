@@ -6,7 +6,7 @@ import cats.syntax.invariant._
 import cats.syntax.cartesian._
 import DisjointCartesian.ops._
 
-trait LiftS[F[_], Repr <: HList] { self =>
+trait LiftS[F[_], Repr <: HList] {
   // There is a trick here which greatly simplifies the implementation. The
   // type of instances is actually each element of `Repr` lifted with `F[_]`.
   // In order keep the two lists aligned (which is particularely usefull when
@@ -16,12 +16,6 @@ trait LiftS[F[_], Repr <: HList] { self =>
 }
 
 object LiftS {
-  // This implicit is would be needed to use`.mat` directly; `.materialize` does not uses it.
-  import shapeless.ops.hlist.LiftAll
-  implicit def viaLiftAll[F[_], Repr <: HList, LiftedRepr <: HList, TypeTags <: HList]
-    (implicit la: LiftAll.Aux[F, Repr, LiftedRepr]): LiftS[F, Repr] =
-      new LiftS[F, Repr] { val instances: Repr = la.instances.asInstanceOf[Repr] }
-
   implicit class LiftSplit[F[_], H <: HList](self: LiftS[F, H]) {
     def leftSide [L <: HList, R <: HList](implicit a: Append.Aux[L, R, H]): LiftS[F, L] =
       new LiftS[F, L] { val instances: L = a.split(self.instances)._1 }
@@ -51,17 +45,11 @@ trait DeriveSBoilerplate {
   implicit class case5implicits[A, I1, I2, I3, I4, I5]
     (self: DeriveS.Aux[A, I1 :: I2 :: I3 :: I4 :: I5 :: HNil]) {
       def materialize[F[_]]
-        (implicit
-          I1: F[I1],
-          I2: F[I2],
-          I3: F[I3],
-          I4: F[I4],
-          I5: F[I5],
-          c: CanDerive[F]
-        ): F[A] = self.derive(new LiftS[F, I1 :: I2 :: I3 :: I4 :: I5 :: HNil] {
-          def instances = (I1 :: I2 :: I3 :: I4 :: I5 :: HNil)
-             .asInstanceOf[I1 :: I2 :: I3 :: I4 :: I5 :: HNil]
-        }, c)
+        (implicit I1: F[I1], I2: F[I2], I3: F[I3], I4: F[I4], I5: F[I5], c: CanDerive[F]): F[A] =
+          self.derive(new LiftS[F, I1 :: I2 :: I3 :: I4 :: I5 :: HNil] {
+            def instances = (I1 :: I2 :: I3 :: I4 :: I5 :: HNil)
+               .asInstanceOf[I1 :: I2 :: I3 :: I4 :: I5 :: HNil]
+          }, c)
     }
 }
 
@@ -100,7 +88,7 @@ object DeriveS extends DeriveSBoilerplate {
         r.value.derive[F].imap(g.from)(g.to)
     }
 
-  // d: DeriveS[H] → DeriveS[H :: HNil] { type Repr = d.Repr }
+  // r: DeriveS[H] → DeriveS[H :: HNil] { type Repr = r.Repr }
   implicit def caseHLast[H, R <: HList](implicit r: Lazy[Aux[H, R]]): Aux[H :: HNil, R] =
     new DeriveS[H :: HNil] {
       type Repr = R
@@ -108,11 +96,11 @@ object DeriveS extends DeriveSBoilerplate {
         r.value.derive[F].imap { a => a :: HNil } { case a :: HNil => a }
     }
 
-  // → DeriveS[CNil] { type Repr = CNil }
+  // → DeriveS[CNil] { type Repr = HNil }
   // Note that this case is impossible as they are not value of type `CNil`.
   implicit def caseCNil: Aux[CNil, HNil] = new DeriveS[CNil] {
     type Repr = HNil
-    def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = null.asInstanceOf[F[CNil]]
+    def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = ???
   }
 
   // h: DeriveS[H], t: DeriveS[T] → DeriveS[H :: T] { type Repr = h.Repr ++ t.Repr }
@@ -159,24 +147,11 @@ object DeriveSTest {
   type Expected = Int :: Double :: String :: String :: String :: HNil
   implicitly[deriveS.Repr =:= Expected]
 
-  {
-    import cats.std.all._
-    val showIDAABBS: Show[IDAABBS] = deriveS.materialize[Show]
-    assert(showIDAABBS.show(instance) == showResult)
-  }
-
-  {
-    import cats.std.all._
-    val showIDAABBS: Show[IDAABBS] = deriveS.derive[Show]
-    assert(showIDAABBS.show(instance) == showResult)
-  }
-
-  illTyped(
-    "deriveS.derive[Show]",
-    "could not find implicit value for parameter l: LiftS\\[cats.Show,DeriveSTest.deriveS.Repr\\]")
-
   illTyped(
     "deriveS.materialize[Show]",
     "could not find implicit value for parameter I1: cats.Show\\[Int\\].*")
-}
 
+  import cats.std.all._
+  val showIDAABBS: Show[IDAABBS] = deriveS.materialize[Show]
+  assert(showIDAABBS.show(instance) == showResult)
+}

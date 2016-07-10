@@ -1,6 +1,6 @@
 import shapeless._
 
-/** Flatten a tree of `HList` / `Coproduct` into a single HList contains types at leave position. */
+/** Flattens a tree of `HList` / `Coproduct` into a single `HList` contains all types at leave position. */
 trait Leaves[Repr] {
   type FlatRepr <: HList
 }

@@ -33,7 +33,7 @@ This repository contains two proof of concept implementations of this idea, `Der
 trait DeriveF[A] {
   type Repr
 
-  def derive[F[_]](implicit l: LiftF[F, Repr], c: CanDerive[F]): F[A]
+  def derive[F[_]: LiftF : CanDerive]: F[A]
 }
 ```
 
@@ -96,30 +96,29 @@ implicitly[deriveFFlat.FlatRepr =:= Expected2]
 The last piece of the puzzle is also the ugliest, it the `LiftF` type class which takes case of aggregating and restituting `F[_]` instances:
 
 ```scala
-trait LiftF[F[_], Repr] { self =>
+trait LiftF[F[_]] {
   def get[A: TypeTag]: F[A]
-  def cast[R]: LiftF[F, R] = this.asInstanceOf[LiftF[F, R]]
 }
 ```
 
-With `get` being a function from `TypeTag[A]` to `F[A]` it is possible to store all `F[_]` instance for data types of leave position in `Map` indexed by `TypeTag`, and propagate the same `LiftF` instance all the way through the derivation, which requires successively "downcasting" the `LiftF` instance to smaller `Repr`. Constructing a `LiftF` instance is done with a `materialize` method similar to the boilerplate version of [LiftAll](https://github.com/milessabin/shapeless/blob/92f2d5e3fede4ab189db686620fa175fe4856e1a/core/src/main/scala/shapeless/ops/hlists.scala#L2809-L2838) described above:
+With `get` being a function from `TypeTag[A]` to `F[A]` it is possible to store all `F[_]` instance for data types of leave position in `Map` indexed by `TypeTag`, and propagate the same `LiftF` instance all the way through the derivation. Constructing a `LiftF` instance is done with a `materialize` method similar to the boilerplate version of [LiftAll](https://github.com/milessabin/shapeless/blob/92f2d5e3fede4ab189db686620fa175fe4856e1a/core/src/main/scala/shapeless/ops/hlists.scala#L2809-L2838) described above:
 
 ```scala
 implicit class case2implicits[A, I1: TypeTag, I2: TypeTag]
   (self: DeriveFFlat.Aux[A, I1 :: I2 :: HNil]) {
     def materialize[F[_]]
       (implicit I1: F[I1], I2: F[I2] c: CanDerive[F]): F[A] =
-        self.d.derive(new LiftF[F, HNil] {
+        self.d.derive(new LiftF[F] {
           import Predef.{implicitly => i}
           val map: Map[TypeTag[_], F[_]] = Map(i[TypeTag[I1]] -> I1, i[TypeTag[I2]] -> I2)
           def get[T: TypeTag]: F[T]      = map(i[TypeTag[T]]).asInstanceOf[F[T]]
-        }.cast, c)
+        }, c)
   }
 ```
 
 Now you are probably thinking that there *must be* a nicer way to do the same construction which does not involves `TypeTag`s...
 
-**`DeriveS`** is exactly that. It's an equivalent construction to `DeriveF`, but instead of relying on a `Map` of `TypeTag`, it properly propagates the appropriate type classes instances at the type level. Do to so, the `Repr` type member of `DeriveS` flatten "on the fly" (and not in a separate step like for it is in `DeriveF` does with `Leaves`), which makes it possible to keep track of a corresponding `LiftedRepr`, which holds the exact same element that `Repr` but lifted in `F[_]`:
+`DeriveS` is exactly that. It's an equivalent construction to `DeriveF`, but instead of relying on a `Map` of `TypeTag`, it properly propagates the appropriate type classes instances at the type level. Do to so, the `Repr` type member of `DeriveS` flatten "on the fly" (and not in a separate step like what `DeriveF` does with `Leaves`). This makes it possible to use a safe version `LiftS` which keeps track the instances it carries in a `LiftedRepr` `HList`, which holds the exact same element that `Repr` but lifted to `F[_]`:
 
 ```scala
 trait LiftS[F[_], Repr <: HList, LiftedRepr <: HList] { self =>
@@ -127,7 +126,7 @@ trait LiftS[F[_], Repr <: HList, LiftedRepr <: HList] { self =>
 }
 ```
 
-There is some complicated machinery involved in the derivation (see the `Append` type class) to keep `Repr` and `LiftedRepr` in sync. The gain is that `get` can be defined very elegantly, which a type level guaranty that the requested `F[A]` is indeed present:
+There is some complicated machinery involved in the derivation (see the `Append` type class) to keep `Repr` and `LiftedRepr` in sync. The gain is that `get` can be defined very elegantly, with a type level guaranty that the requested `F[A]` is the only element present:
 
 ```scala
 implicit class LiftGet[F[_], A](self: LiftS[F, A :: HNil, F[A] :: HNil]) {
@@ -137,7 +136,7 @@ implicit class LiftGet[F[_], A](self: LiftS[F, A :: HNil, F[A] :: HNil]) {
 
 ### Benchmarks
 
-This table shows compilation time for various pieces of code involved in the derivation. The overall process take about 0.5 seconds with `DeriveF`, about 25 seconds with `DeriveS` and 0.1 seconds with traditional shapeless derivation (`TShow`).
+This table shows compilation time for various pieces of code involved in the derivation of the `IDAABBS` data type given above. The overall process to derive a `Show[IDAABBS]` instance takes ~0.5 seconds with `DeriveF`, ~25 seconds with `DeriveS` and ~0.1 seconds with traditional shapeless derivation (`TShow`).
 
 |          Scala Code           |        Compilation Time       |
 |-------------------------------|:-----------------------------:|
@@ -146,4 +145,4 @@ This table shows compilation time for various pieces of code involved in the der
 |`deriveFFlat.materialize[Show]`|         0.0435 seconds        |
 |`the[DeriveS[IDAABBS]]        `|         25.141 seconds        |
 |`deriveS.materialize[Show]    `|         0.0044 seconds        |
-|`implicitly[TShow[IDAABBS]]   `|         0.0934 seconds        |
+|`the[TShow[IDAABBS]]          `|         0.0934 seconds        |
