@@ -11,7 +11,7 @@ import simulacrum.typeclass
 /** All you need for automatic type class derivation of `F[_]`. */
 @typeclass trait CanDerive[F[_]] extends Invariant[F] with Cartesian[F] with DisjointCartesian[F]
 
-object CanDeriveShow {
+object CanDerive {
   implicit val canDeriveShow: CanDerive[Show] = new CanDerive[Show] {
     def product[A, B](fa: Show[A], fb: Show[B]): Show[(A, B)] = new Show[(A, B)] {
       def show(ab: (A, B)): String = "(" + fa.show(ab._1) + ", " + fb.show(ab._2) + ")"

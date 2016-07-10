@@ -39,7 +39,7 @@ object LiftS {
 trait DeriveS[A] {
   type Repr <: HList
 
-  def mat[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A]
+  def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A]
 }
 
 /** Second phase of automatic type class derivation for `F[A]`. */
@@ -58,7 +58,7 @@ trait DeriveSBoilerplate {
           I4: F[I4],
           I5: F[I5],
           c: CanDerive[F]
-        ): F[A] = self.mat(new LiftS[F, I1 :: I2 :: I3 :: I4 :: I5 :: HNil] {
+        ): F[A] = self.derive(new LiftS[F, I1 :: I2 :: I3 :: I4 :: I5 :: HNil] {
           def instances = (I1 :: I2 :: I3 :: I4 :: I5 :: HNil)
              .asInstanceOf[I1 :: I2 :: I3 :: I4 :: I5 :: HNil]
         }, c)
@@ -72,7 +72,7 @@ object DeriveS extends DeriveSBoilerplate {
   implicit def caseNoGeneric[A](implicit h: HasNoGeneric[A]): Aux[A, A :: HNil] =
     new DeriveS[A] {
       type Repr = A :: HNil
-      def mat[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] = l.get
+      def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] = l.get
     }
 
   // g: Generic[A], r: DeriveS[g.Repr] → DeriveS[A] { type Repr = g.Repr }
@@ -83,8 +83,8 @@ object DeriveS extends DeriveSBoilerplate {
       r: Lazy[Aux[G, R]]
     ): Aux[A, R] = new DeriveS[A] {
       type Repr = R
-      def mat[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] =
-        r.value.mat[F].imap(g.from)(g.to)
+      def derive[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] =
+        r.value.derive[F].imap(g.from)(g.to)
     }
 
   // g: Generic[A], r: DeriveS[g.Repr] → DeriveS[A] { type Repr = g.Repr.toHList }
@@ -96,22 +96,23 @@ object DeriveS extends DeriveSBoilerplate {
       r: Lazy[Aux[G, R]]
     ): Aux[A, R] = new DeriveS[A] {
       type Repr = R
-      def mat[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] =
-        r.value.mat[F].imap(g.from)(g.to)
+      def derive[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] =
+        r.value.derive[F].imap(g.from)(g.to)
     }
 
   // d: DeriveS[H] → DeriveS[H :: HNil] { type Repr = d.Repr }
   implicit def caseHLast[H, R <: HList](implicit r: Lazy[Aux[H, R]]): Aux[H :: HNil, R] =
     new DeriveS[H :: HNil] {
       type Repr = R
-      def mat[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :: HNil] =
-        r.value.mat[F].imap { a => a :: HNil } { case a :: HNil => a }
+      def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :: HNil] =
+        r.value.derive[F].imap { a => a :: HNil } { case a :: HNil => a }
     }
 
-  // This case is impossible as they are not value of type `CNil`.
-  implicit def cnil: Aux[CNil, HNil] = new DeriveS[CNil] {
+  // → DeriveS[CNil] { type Repr = CNil }
+  // Note that this case is impossible as they are not value of type `CNil`.
+  implicit def caseCNil: Aux[CNil, HNil] = new DeriveS[CNil] {
     type Repr = HNil
-    def mat[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = null.asInstanceOf[F[CNil]]
+    def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = null.asInstanceOf[F[CNil]]
   }
 
   // h: DeriveS[H], t: DeriveS[T] → DeriveS[H :: T] { type Repr = h.Repr ++ t.Repr }
@@ -123,8 +124,8 @@ object DeriveS extends DeriveSBoilerplate {
     ): Aux[H :: T, LR] =
       new DeriveS[H :: T] {
         type Repr = LR
-        def mat[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :: T] =
-          h.mat(l.leftSide[HR, TR], c).product(t.value.mat[F](l.rightSide[HR, TR], c))
+        def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :: T] =
+          h.derive(l.leftSide[HR, TR], c).product(t.value.derive[F](l.rightSide[HR, TR], c))
             .imap { case (a, b) => a :: b } { case a :: b => (a, b) }
       }
 
@@ -137,8 +138,8 @@ object DeriveS extends DeriveSBoilerplate {
     ): Aux[H :+: T, LR] =
       new DeriveS[H :+: T] {
         type Repr = LR
-        def mat[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :+: T] =
-          h.mat(l.leftSide[HR, TR], c).coproduct(t.value.mat[F](l.rightSide[HR, TR], c))
+        def derive[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :+: T] =
+          h.derive(l.leftSide[HR, TR], c).coproduct(t.value.derive[F](l.rightSide[HR, TR], c))
             .imap {
               case Xor.Left (a) => Inl(a)
               case Xor.Right(b) => Inr(b)
@@ -149,45 +150,33 @@ object DeriveS extends DeriveSBoilerplate {
       }
 }
 
-object DeriveSModel {
-  // Can't be defined inside of DeriveSTest because of SI-7046 (?)
-  sealed trait AABB
-  case class AA(a: String) extends AABB
-  case class BB(a: String) extends AABB
-  case class DAABB(d: Double, aabb: AABB)
-  case class IDAABBS(i: Int, daabb: DAABB, s: String)
-}
-import DeriveSModel._
-
-object DeriveSTest extends App {
+object DeriveSTest {
+  import Model._
   import shapeless.test.illTyped
   import cats.Show
 
-  val rg = the[DeriveS[IDAABBS]]
+  val deriveS = the[DeriveS[IDAABBS]]
   type Expected = Int :: Double :: String :: String :: String :: HNil
-  implicitly[rg.Repr =:= Expected]
-
+  implicitly[deriveS.Repr =:= Expected]
 
   {
-  import CanDeriveShow._
-    import cats.implicits._
-    val showIDAABBS: Show[IDAABBS] = rg.materialize[Show]
-    println(showIDAABBS.show(IDAABBS(1, DAABB(1.1, AA("aa")), "s")))
+    import cats.std.all._
+    val showIDAABBS: Show[IDAABBS] = deriveS.materialize[Show]
+    assert(showIDAABBS.show(instance) == showResult)
   }
 
   {
-  import CanDeriveShow._
-    import cats.implicits._
-    val showIDAABBS: Show[IDAABBS] = rg.mat[Show]
-    println(showIDAABBS.show(IDAABBS(1, DAABB(1.1, AA("aa")), "s")))
+    import cats.std.all._
+    val showIDAABBS: Show[IDAABBS] = deriveS.derive[Show]
+    assert(showIDAABBS.show(instance) == showResult)
   }
 
   illTyped(
-    "rg.mat[Show]",
-    "could not find implicit value for parameter l: LiftS\\[cats.Show,DeriveSTest.rg.Repr\\]")
+    "deriveS.derive[Show]",
+    "could not find implicit value for parameter l: LiftS\\[cats.Show,DeriveSTest.deriveS.Repr\\]")
 
   illTyped(
-    "rg.materialize[Show]",
+    "deriveS.materialize[Show]",
     "could not find implicit value for parameter I1: cats.Show\\[Int\\].*")
 }
 
