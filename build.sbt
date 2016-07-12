@@ -13,7 +13,7 @@ scalacOptions := Seq(
   "-language:implicitConversions",
   "-language:experimental.macros",
   "-unchecked",
-  // "-Xfatal-warnings",
+  "-Xfatal-warnings",
   "-Xlint",
   "-Yinline-warnings",
   "-Yno-adapted-args",
@@ -21,5 +21,4 @@ scalacOptions := Seq(
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard",
   "-Ywarn-unused-import",
-  // "-Xlog-implicits",
   "-Xfuture")

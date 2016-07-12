@@ -35,6 +35,8 @@ trait LowPrioDeriveF {
 
 object DeriveF extends LowPrioDeriveF {
   // g: Generic[A], r: DeriveF[g.TreeRepr] → DeriveF[A] { type TreeRepr = g.TreeRepr }
+  // Note that `A` is also added to the list of `Seen` generics, which prevents
+  // this case to be used more than once for the same A (see NotIn).
   implicit def caseGeneric[A: TypeTag, G, R, S <: HList]
     (implicit
       n: NotIn[S, A],
@@ -45,6 +47,9 @@ object DeriveF extends LowPrioDeriveF {
       def derive[F[_]: LiftF : CanDerive]: F[A] = {
         val tta = implicitly[TypeTag[A]]
 
+        // Memoize the current `DeriveF` in `LiftF` for potential recursive structure.
+        // Note that the `self.derive` invocation is done inside a def, which prevents
+        // infinite loops (but is probably not enough to be stack safe...).
         val memoizedLiftF: LiftF[F] = new LiftF[F] {
           def get[T](implicit t: TypeTag[T]): F[T] =
             if(t == tta) self.derive.asInstanceOf[F[T]] else LiftF[F].get(t)
@@ -54,7 +59,9 @@ object DeriveF extends LowPrioDeriveF {
       }
     }
 
-  implicit def caseRecursion[A: TypeTag, S <: HList]
+  // When `A ∈ Seen`, we break the recursion by obtaining `F[A]` directly from `LiftF[A]`.
+  // This is sound because every element added to `Seen` comes with a new entry in `LiftF`.
+  implicit def caseMemoizedGeneric[A: TypeTag, S <: HList]
     (implicit s: Selector[S, A]): Aux[A, HNil, S] = new DeriveF[A, S] {
       type TreeRepr = HNil
       def derive[F[_]: LiftF : CanDerive]: F[A] = LiftF[F].get[A]
@@ -136,8 +143,8 @@ trait DerivingBoilerplate {
         }
     }
 
-  // implicit class case3implicits[A, I1, I2, I3]
-  // implicit class case4implicits[A, I1, I2, I3, I4]
+  // implicit class case3implicits[A, I1: TypeTag, I2: TypeTag, I3: TypeTag, T0]
+  // implicit class case4implicits[A, I1: TypeTag, I2: TypeTag, I3: TypeTag, I4: TypeTag, T0]
 
   implicit class case5implicits[A, I1: TypeTag, I2: TypeTag, I3: TypeTag, I4: TypeTag, I5: TypeTag, T0]
     (self: Deriving.Aux[A, T0, I1 :: I2 :: I3 :: I4 :: I5 :: HNil]) {
@@ -153,6 +160,9 @@ trait DerivingBoilerplate {
               map(t).asInstanceOf[F[T]]
           }, c)
     }
+
+  // implicit class case6implicits[A, I1: TypeTag, I2: TypeTag, I3: TypeTag, I4: TypeTag, I5: TypeTag, I6: TypeTag, T0]
+  // ...
 }
 
 trait Deriving[A] {
@@ -180,9 +190,12 @@ class DerivingCurried[A] {
 }
 
 object DeriveFTest extends App {
-  import Model._
   import shapeless.test.illTyped
   import cats.Show
+
+  // Non Recursive HList/Coproduct structure ----------------------------------
+
+  import Model._
 
   val derivingIDAABS = Deriving[IDAABBS].gen
 
@@ -208,7 +221,7 @@ object DeriveFTest extends App {
   val showIDAABBS: Show[IDAABBS] = derivingIDAABS.materialize[Show]
   assert(showIDAABBS.show(instance) == showResult)
 
-  // Recursion -----------------------------------------------------
+  // Either Recursion ---------------------------------------------------------
 
   case class Dog(age: Long)
   case class Cat(name: String, friend: Either[Cat, Dog])
@@ -221,16 +234,20 @@ object DeriveFTest extends App {
   assert(showCat.show(Cat("sansan", Right(Dog(4)))) == "(sansan, [case: [case: 4]])")
   assert(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4)))))) == "(sansan, [case: (aslan, [case: [case: 4]])])")
 
-  // TestDefns -----------------------------------------------------
+  // TestDefns ----------------------------------------------------------------
 
   import TestDefns._
 
   val derivingIList = Deriving[IList[String]].gen
-  val derivingdSnoc = Deriving[Snoc[String]].gen
-  val derivingdTree = Deriving[Tree[String]].gen
-
+  implicitly[derivingIList.TreeRepr =:= ((String :: HNil :: HNil) :+: HNil :+: CNil)]
   implicitly[derivingIList.FlatRepr =:= (String :: HNil)]
+
+  val derivingdSnoc = Deriving[Snoc[String]].gen
+  implicitly[derivingdSnoc.TreeRepr =:= ((HNil :: String :: HNil) :+: HNil :+: CNil)]
   implicitly[derivingdSnoc.FlatRepr =:= (String :: HNil)]
+
+  val derivingdTree = Deriving[Tree[String]].gen
+  implicitly[derivingdTree.TreeRepr =:= ((String :: HNil) :+: (HNil :: HNil :: HNil) :+: CNil)]
   implicitly[derivingdTree.FlatRepr =:= (String :: HNil)]
 
   assert(derivingIList.materialize[Show].show(ICons("foo", INil[String]())) == "[case: (foo, INil())]")
