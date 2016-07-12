@@ -50,7 +50,9 @@ case class IDAABBS(i: Int, daabb: DAABB, s: String)
 `DeriveF[IDAABBS].Repr` looks like the following:
 
 ```scala
-type Expected1 =
+val deriveF = the[DeriveF[IDAABBS]]
+
+implicitly[deriveF.Repr =:= (
   Int ::
     (Double ::
     ((String :: HNil) :+:
@@ -58,9 +60,7 @@ type Expected1 =
     HNil) ::
   String ::
   HNil
-
-val deriveF = the[DeriveF[IDAABBS]]
-implicitly[deriveF.Repr =:= Expected1]
+)]
 ```
 
 The rules to construct a `DeriveF` are the following:
@@ -84,13 +84,11 @@ This construction is total under the assumption that every type has either a `Ge
 @typeclass trait CanDerive[F[_]] extends Invariant[F] with Cartesian[F] with DisjointCartesian[F]
 ```
 
-The next step consists in flattening the tree `Repr` into a single, flat `HList`. This is done with a `trait Leaves[Repr] { type FlatRepr <: HList }` type class which does some (pretty involved) induction on `Repr`, and would end up transforming the `type Expected1` representation showed above into the following:
+The next step consists in flattening the tree `Repr` into a single, flat `HList`. This is done with a `trait Leaves[Repr] { type FlatRepr <: HList }` type class which does some (pretty involved) induction on `Repr`, and would end up transforming the tree representation showed above into the following:
 
 ```scala
-type Expected2 = Int :: Double :: String :: String :: String :: HNil
-
 val deriveFFlat = df.flatten
-implicitly[deriveFFlat.FlatRepr =:= Expected2]
+implicitly[deriveFFlat.FlatRepr =:= (Int :: Double :: String :: String :: String :: HNil)]
 ```
 
 The last piece of the puzzle is also the ugliest, it the `LiftF` type class which takes case of aggregating and restituting `F[_]` instances:
