@@ -1,6 +1,27 @@
 This project is an experiment with an alternative automatic type class derivation mechanism. The main objective was to provide accurate error reporting, instead of the opaque `implicit not found` that are encountered with the traditional shapeless way of doing type class derivation.
 
-The key for this technique is to split the work into two phases. First, it computes the complete generic representation of a data type, as a tree of `HList` and `Coproduct`, using the macros already present in shapeless (plus a [tiny addition](https://github.com/milessabin/shapeless/pull/616)). Second, it materializes the desired type class by summoning and combining instances for all types at leaf position in the generic representation. This separation has some nice consequences:
+Here is an overview of the technique:
+
+```scala
+case class Bar(b: Boolean, i: Int)
+case class Foo(s: String, b: Bar)
+
+// 1st phase, slower than current derivation (could maybe be rewritten as a single macro)
+// Note that this phase never fails, no mater what implicits are in scope.
+val deriving = Deriving[Foo].gen
+
+// 2nd phase, very fast, and reports nice errors:
+val showFoo = deriving.materialize[cats.Show]
+val eqFoo   = deriving.materialize[cats.Eq]
+val ordFoo  = deriving.materialize[scala.math.Ordering]
+
+// Here materialize is added to `Deriving` with implicit classes, one per `HList` arity:
+
+def materialize[F[_]: CanDerive]
+  (implicit I1: F[Boolean], I2: F[Int], I3: F[String]): F[Foo]
+```
+
+The key for this technique is to split the work into two phases. First, it computes the complete generic representation of a data type, as a tree of `HList` and `Coproduct`, using the macros already present in shapeless. Second, it materializes the desired type class by summoning and combining instances for all types at leaf position in the generic representation. This separation has some nice consequences:
 
 1. Because all the "unsafe" implicit resolution appends in isolation, and at the very end of the precess, it becomes possible to report accurate errors about which implicits are missing. This can be achieved with a boilerplate alternative to [LiftAll](https://github.com/milessabin/shapeless/blob/92f2d5e3fede4ab189db686620fa175fe4856e1a/core/src/main/scala/shapeless/ops/hlists.scala#L2809-L2838), which, given an `HList` which shape `A :: B :: C :: HNil`, summons three implicits `F[A]`, `F[B]` and `F[C]`:
 
