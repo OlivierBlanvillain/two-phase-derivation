@@ -1,22 +1,23 @@
 import cats.Show
-import cats.std.all._
-import Model._
 import shapeless._
-import shapeless.test.{compileTime => c}
 import scala.concurrent.duration.Duration
 
-object Benchmarks extends App {
-  val deriveF = the[DeriveF[IDAABBS]]
-  val deriveS = the[DeriveS[IDAABBS]]
-  val deriveFFlat = deriveF.flatten
+object Benchmarks /* extends App */ {
+  // Waiting for 2.3.2...
+
+  // import Model._
+  // import cats.std.all._
+  // import shapeless.test.{compileTime => c}
+  def c(s: String): Duration = ???
+  // val deriveF = Deriving[IDAABBS].gen
+  // val deriveS = the[DeriveS[IDAABBS]]
 
   def s(d: => Duration): String = s"        ${(d.toNanos / 1E9).toString.take(6)} seconds        |"
 
   println("|          Scala Code           | " +     "       Compilation Time       |")
   println("|-------------------------------| " +     "----------------------------- |")
-  println("|`the[DeriveF[IDAABBS]]        `| " + s(c("the[DeriveF[IDAABBS]]        ")))
-  println("|`deriveF.flatten              `| " + s(c("deriveF.flatten              ")))
-  println("|`deriveFFlat.materialize[Show]`| " + s(c("deriveFFlat.materialize[Show]")))
+  println("|`Deriving[IDAABBS].gen        `| " + s(c("Deriving[IDAABBS].gen        ")))
+  println("|`deriveF.materialize[Show]    `| " + s(c("deriveF.materialize[Show]    ")))
   println("|`the[DeriveS[IDAABBS]]        `| " + s(c("the[DeriveS[IDAABBS]]        ")))
   println("|`deriveS.materialize[Show]    `| " + s(c("deriveS.materialize[Show]    ")))
   println("|`the[TShow[IDAABBS]]          `| " + s(c("the[TShow[IDAABBS]]          ")))

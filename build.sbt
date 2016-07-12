@@ -1,13 +1,8 @@
 scalaVersion := "2.11.8"
 
 libraryDependencies := Seq(
-  // "shapeless" % "2.3.2-SNAPSHOT" is a published local build of
-  // https://github.com/milessabin/shapeless/pull/616
-  "com.chuusai"          %% "shapeless"  % "2.3.2-SNAPSHOT",
-  "org.typelevel"        %% "cats"       % "0.6.0",
-  "com.github.mpilquist" %% "simulacrum" % "0.7.0",
-  compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-)
+  "com.chuusai"   %% "shapeless" % "2.3.1",
+  "org.typelevel" %% "cats"      % "0.6.0")
 
 scalacOptions := Seq(
   "-deprecation",

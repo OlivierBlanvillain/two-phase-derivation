@@ -1,10 +1,45 @@
 import shapeless._
 import shapeless.ops.coproduct.ToHList
 import cats.data.Xor
+import cats.Later
 
 import cats.syntax.invariant._
 import cats.syntax.cartesian._
-import DisjointCartesian.ops._
+
+// ---------------------------------------------------------------------------------------
+// Compiles 50x slower than `DeriveF`, uses type level computations instead of `TypeTag`s.
+// ---------------------------------------------------------------------------------------
+
+/** `shapeless.ops.hlist.Prepend` extended with a `split` method to reverse the appending. */
+trait Append[P <: HList, S <: HList] extends DepFn2[P, S] with Serializable {
+  type Out <: HList
+  def split(o: Out): (P, S)
+}
+
+trait LowPriorityAppend {
+  type Aux[P <: HList, S <: HList, Out0 <: HList] = Append[P, S] { type Out = Out0 }
+
+  implicit def hlistAppend[PH, PT <: HList, S <: HList, AOut <: HList]
+    (implicit a: Aux[PT, S, AOut]): Aux[PH :: PT, S, PH :: AOut] =
+      new Append[PH :: PT, S] {
+        type Out = PH :: AOut
+        def apply(p: PH :: PT, s: S): Out = p.head :: a(p.tail, s)
+        def split(o: Out): (PH :: PT, S) = {
+          val ph = o.head
+          val (pt, s) = a.split(o.tail)
+          (ph :: pt, s)
+        }
+      }
+}
+
+object Append extends LowPriorityAppend {
+  implicit def hnilAppend[S <: HList]: Aux[HNil, S, S] =
+    new Append[HNil, S] {
+      type Out = S
+      def apply(p: HNil, s: S): S = s
+      def split(o: Out): (HNil, S) = (HNil, o)
+    }
+}
 
 trait LiftS[F[_], Repr <: HList] {
   // There is a trick here which greatly simplifies the implementation. The
@@ -53,16 +88,18 @@ trait DeriveSBoilerplate {
     }
 }
 
-object DeriveS extends DeriveSBoilerplate {
+trait LowPrioDeriveS {
   type Aux[A, R0 <: HList] = DeriveS[A] { type Repr = R0 }
 
-  // h: HasNoGeneric[A] → DeriveS[A] { type Repr = A :: HNil }
-  implicit def caseNoGeneric[A](implicit h: HasNoGeneric[A]): Aux[A, A :: HNil] =
+  // h: NotGeneric[A] → DeriveS[A] { type Repr = A :: HNil }
+  implicit def caseNoGeneric[A](implicit h: NotGeneric[A]): Aux[A, A :: HNil] =
     new DeriveS[A] {
       type Repr = A :: HNil
       def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[A] = l.get
     }
+}
 
+object DeriveS extends DeriveSBoilerplate with LowPrioDeriveS {
   // g: Generic[A], r: DeriveS[g.Repr] → DeriveS[A] { type Repr = g.Repr }
   // when g.Repr: HList
   implicit def caseGenericProduct[A, G <: HList, R <: HList]
@@ -100,7 +137,7 @@ object DeriveS extends DeriveSBoilerplate {
   // Note that this case is impossible as they are not value of type `CNil`.
   implicit def caseCNil: Aux[CNil, HNil] = new DeriveS[CNil] {
     type Repr = HNil
-    def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = ???
+    def derive[F[_]](implicit l: LiftS[F, Repr], c: CanDerive[F]): F[CNil] = unexpected
   }
 
   // h: DeriveS[H], t: DeriveS[T] → DeriveS[H :: T] { type Repr = h.Repr ++ t.Repr }
@@ -127,7 +164,7 @@ object DeriveS extends DeriveSBoilerplate {
       new DeriveS[H :+: T] {
         type Repr = LR
         def derive[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :+: T] =
-          h.derive(l.leftSide[HR, TR], c).coproduct(t.value.derive[F](l.rightSide[HR, TR], c))
+          CanDerive[F].coproduct(Later(h.derive(l.leftSide[HR, TR], c)), Later(t.value.derive[F](l.rightSide[HR, TR], c)))
             .imap {
               case Xor.Left (a) => Inl(a)
               case Xor.Right(b) => Inr(b)
@@ -138,20 +175,21 @@ object DeriveS extends DeriveSBoilerplate {
       }
 }
 
-object DeriveSTest {
-  import Model._
-  import shapeless.test.illTyped
-  import cats.Show
+// // Compiles in 16 seconds...
+// object DeriveSTest {
+//   import Model._
+//   import shapeless.test.illTyped
+//   import cats.Show
 
-  val deriveS = the[DeriveS[IDAABBS]]
-  type Expected = Int :: Double :: String :: String :: String :: HNil
-  implicitly[deriveS.Repr =:= Expected]
+//   val deriveS = the[DeriveS[IDAABBS]]
+//   type Expected = Int :: Double :: String :: String :: String :: HNil
+//   implicitly[deriveS.Repr =:= Expected]
 
-  illTyped(
-    "deriveS.materialize[Show]",
-    "could not find implicit value for parameter I1: cats.Show\\[Int\\].*")
+//   illTyped(
+//     "deriveS.materialize[Show]",
+//     "could not find implicit value for parameter I1: cats.Show\\[Int\\].*")
 
-  import cats.std.all._
-  val showIDAABBS: Show[IDAABBS] = deriveS.materialize[Show]
-  assert(showIDAABBS.show(instance) == showResult)
-}
+//   import cats.std.all._
+//   val showIDAABBS: Show[IDAABBS] = deriveS.materialize[Show]
+//   assert(showIDAABBS.show(instance) == showResult)
+// }
