@@ -10,6 +10,7 @@ trait LeavesCandies {
   protected type HL = HList
   protected type CO = Coproduct
   protected def aux[Repr, R0 <: HL]: Aux[Repr, R0] = new Leaves[Repr] { type FlatRepr = R0 }
+  // TODO instance/evidence
 }
 
 trait LeavesLowerPriority extends LeavesCandies {

@@ -1,3 +1,5 @@
+// https://github.com/milessabin/kittens/blob/v1.0.0-M3/core/src/test/scala/cats/derived/adtdefns.scala
+
 object TestDefns {
   sealed trait IList[A]
   final case class ICons[A](head: A, tail: IList[A]) extends IList[A]

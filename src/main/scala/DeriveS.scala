@@ -140,6 +140,7 @@ object DeriveS extends DeriveSBoilerplate with LowPrioDeriveS {
       }
 }
 
+// // Compiles in 16 seconds...
 // object DeriveSTest {
 //   import Model._
 //   import shapeless.test.illTyped
