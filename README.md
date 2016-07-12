@@ -1,5 +1,3 @@
-### Two Phase Derivation
-
 This project is an experiment with an alternative automatic type class derivation mechanism. The main objective was to provide accurate error reporting, instead of the opaque `implicit not found` that are encountered with the traditional shapeless way of doing type class derivation.
 
 The key for this technique is to split the work into two phases. First, it computes the complete generic representation of a data type, as a tree of `HList` and `Coproduct`, using the macros already present in shapeless (plus a [tiny addition](https://github.com/milessabin/shapeless/pull/616)). Second, it materializes the desired type class by summoning and combining instances for all types at leaf position in the generic representation. This separation has some nice consequences:
@@ -29,15 +27,14 @@ Now for the limitations:
 
 This repository contains two proof of concept implementations of this idea, `DeriveF` (F for Fast) and `DeriveS` (S for Slow). The design of `DeriveF` is briefly explained below:
 
-```
+```scala
 trait DeriveF[A] {
-  type Repr
-
+  type TreeRepr
   def derive[F[_]: LiftF : CanDerive]: F[A]
 }
 ```
 
-The `Repr` type represents the `HList` / `Coproduct` generic tree representation of `A`. For example, given these case classes:
+The `TreeRepr` type represents the `HList` / `Coproduct` generic tree representation of `A`. For example, given these case classes:
 
 ```scala
 sealed trait AABB
@@ -47,51 +44,40 @@ case class DAABB(d: Double, aabb: AABB)
 case class IDAABBS(i: Int, daabb: DAABB, s: String)
 ```
 
-`DeriveF[IDAABBS].Repr` looks like the following:
+`DeriveF[IDAABBS].TreeRepr` looks like the following:
 
 ```scala
-val deriveF = the[DeriveF[IDAABBS]]
-
-implicitly[deriveF.Repr =:= (
-  Int ::
-    (Double ::
-    ((String :: HNil) :+:
-     (String :: HNil) :+: CNil) ::
-    HNil) ::
-  String ::
-  HNil
-)]
+Int ::
+  (Double ::
+  ((String :: HNil) :+:
+   (String :: HNil) :+: CNil) ::
+  HNil) ::
+String ::
+HNil
 ```
 
-The rules to construct a `DeriveF` are the following:
-
-- caseNoGeneric: `h: HasNoGeneric[A] → DeriveF[A] { type Repr = A }`
-- caseGeneric: `g: Generic[A], r: DeriveF[g.Repr] → DeriveF[A] { type Repr = g.Repr }`
-- caseHLast: `→ DeriveS[CNil] { type Repr = CNil }`
-- caseCNil: `d: DeriveF[H] → DeriveF[H :: HNil] { type Repr = d.Repr }`
-- caseHCons: `h: DeriveF[H], t: DeriveF[T] → DeriveF[H ::  T] { type Repr = h.Repr ::  t.Repr }`
-- caseCCons: `h: DeriveF[H], t: DeriveF[T] → DeriveF[H :+: T] { type Repr = h.Repr :+: t.Repr }`
-
-This construction is total under the assumption that every type has either a `Generic` or a `HasNoGeneric` instance. In addition to the type manipulation describe above, the construction of `DeriveF` also takes care of recursively building implementations of the `derive` method by obtaining `F[_]` instances from `LiftF` (explained later), and combining them using the `CanDerive` type class:
+The implicit construction for `DeriveF` is *total*, meaning it is possible to compile a `DeriveF[A]` for every possible type `A`. In addition to the type manipulation describe above, the construction of `DeriveF` also takes care of recursively building implementations of the `derive` method by obtaining `F[_]` instances from `LiftF` (explained later), and combining them using the `CanDerive` type class:
 
 ```scala
-/** `Xor` version of `Cartesian`... */
-@typeclass trait DisjointCartesian[F[_]] {
-  def coproduct[A, B](fa: F[A], fb: F[B]): F[Xor[A, B]]
+/** Lazy `Xor` version of `Cartesian`. */
+import cats.data.Xor
+import cats.Eval
+
+trait DisjointCartesian[F[_]] {
+  def coproduct[A, B](fa: Eval[F[A]], fb: Eval[F[B]]): F[Xor[A, B]]
 }
 
 /** All you need for automatic type class derivation of `F[_]`. */
-@typeclass trait CanDerive[F[_]] extends Invariant[F] with Cartesian[F] with DisjointCartesian[F]
+trait CanDerive[F[_]] extends Invariant[F] with Cartesian[F] with DisjointCartesian[F]
 ```
 
 The next step consists in flattening the tree `Repr` into a single, flat `HList`. This is done with a `trait Leaves[Repr] { type FlatRepr <: HList }` type class which does some (pretty involved) induction on `Repr`, and would end up transforming the tree representation showed above into the following:
 
 ```scala
-val deriveFFlat = df.flatten
-implicitly[deriveFFlat.FlatRepr =:= (Int :: Double :: String :: String :: String :: HNil)]
+Int :: Double :: String :: String :: String :: HNil
 ```
 
-The last piece of the puzzle is also the ugliest, it the `LiftF` type class which takes case of aggregating and restituting `F[_]` instances:
+The last piece of the puzzle is also the ugliest, it the `LiftF` type class which takes care of aggregating and restituting `F[_]` instances:
 
 ```scala
 trait LiftF[F[_]] {
@@ -102,17 +88,19 @@ trait LiftF[F[_]] {
 With `get` being a function from `TypeTag[A]` to `F[A]` it is possible to store all `F[_]` instance for data types of leave position in `Map` indexed by `TypeTag`, and propagate the same `LiftF` instance all the way through the derivation. Constructing a `LiftF` instance is done with a `materialize` method similar to the boilerplate version of [LiftAll](https://github.com/milessabin/shapeless/blob/92f2d5e3fede4ab189db686620fa175fe4856e1a/core/src/main/scala/shapeless/ops/hlists.scala#L2809-L2838) described above:
 
 ```scala
-implicit class case2implicits[A, I1: TypeTag, I2: TypeTag]
-  (self: DeriveFFlat.Aux[A, I1 :: I2 :: HNil]) {
+implicit class case2implicits[A, I1: TypeTag, I2: TypeTag, T0]
+  (self: Deriving.Aux[A, T0, I1 :: I2 :: HNil]) {
     def materialize[F[_]]
-      (implicit I1: F[I1], I2: F[I2] c: CanDerive[F]): F[A] =
-        self.d.derive(new LiftF[F] {
-          import Predef.{implicitly => i}
-          val map: Map[TypeTag[_], F[_]] = Map(i[TypeTag[I1]] -> I1, i[TypeTag[I2]] -> I2)
-          def get[T: TypeTag]: F[T]      = map(i[TypeTag[T]]).asInstanceOf[F[T]]
+      (implicit I1: F[I1], I2: F[I2], c: CanDerive[F]): F[A] = {
+        self.underlying.derive(new LiftF[F] {
+          val map: Map[TypeTag[_], F[_]] = Map(implicitly[TypeTag[I1]] -> I1, implicitly[TypeTag[I2]] -> I2)
+          def get[T](implicit t: TypeTag[T]): F[T] = map(t).asInstanceOf[F[T]]
         }, c)
+      }
   }
 ```
+
+### DeriveS
 
 Now you are probably thinking that there *must be* a nicer way to do the same construction which does not involves `TypeTag`s...
 
@@ -132,15 +120,18 @@ implicit class LiftGet[F[_], A](self: LiftS[F, A :: HNil, F[A] :: HNil]) {
 }
 ```
 
+Too bad this nicer implementation compiles 50x times slower than
+
 ### Benchmarks
 
-This table shows compilation time for various pieces of code involved in the derivation of the `IDAABBS` data type given above. The overall process to derive a `Show[IDAABBS]` instance takes ~0.5 seconds with `DeriveF`, ~25 seconds with `DeriveS` and ~0.1 seconds with traditional shapeless derivation (`TShow`).
+The [compileTime macro](https://github.com/milessabin/shapeless/pull/595) allows to benchmark the compilation time of the different approaches.
+
+The following table shows the result when deriving a `Show[IDAABBS]` instance (with the `IDAABBS` data type given above). The overall process for one derivation takes ~0.5 seconds with `DeriveF`, ~25 seconds with `DeriveS` and ~0.1 seconds with traditional shapeless derivation (`TShow`).
 
 |          Scala Code           |        Compilation Time       |
 |-------------------------------|:-----------------------------:|
-|`the[DeriveF[IDAABBS]]        `|         0.4315 seconds        |
-|`deriveF.flatten              `|         0.0578 seconds        |
-|`deriveFFlat.materialize[Show]`|         0.0435 seconds        |
+|`Deriving[IDAABBS].gen        `|         0.4893 seconds        |
+|`deriveF.materialize[Show]    `|         0.0435 seconds        |
 |`the[DeriveS[IDAABBS]]        `|         25.141 seconds        |
 |`deriveS.materialize[Show]    `|         0.0044 seconds        |
 |`the[TShow[IDAABBS]]          `|         0.0934 seconds        |

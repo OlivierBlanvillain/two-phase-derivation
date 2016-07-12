@@ -3,7 +3,7 @@ import cats.functor.Invariant
 import cats.data.Xor
 import cats.Eval
 
-/** `Xor` version of `Cartesian`... */
+/** Lazy `Xor` version of `Cartesian`. */
 trait DisjointCartesian[F[_]] {
   def coproduct[A, B](fa: Eval[F[A]], fb: Eval[F[B]]): F[Xor[A, B]]
 }
