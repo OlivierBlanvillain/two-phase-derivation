@@ -1,11 +1,11 @@
 import shapeless._
 
+/** Negation of `shapeless.Generic`, only exists when `A` does not have a `Generic` representation. */
 trait NotGeneric[A]
 
 trait NotGenericLowPrio {
   def apply[A](implicit n: NotGeneric[A]): NotGeneric[A] = n
   private def instance: NotGeneric[Any] = new NotGeneric[Any] {}
-
   implicit def notGeneric[A]: NotGeneric[A] = instance.asInstanceOf[NotGeneric[A]]
 }
 
@@ -16,14 +16,10 @@ object NotGeneric extends NotGenericLowPrio {
 
 object NotGenericTest {
   import shapeless.test.illTyped
-  case class MYCC1(a: String, i: Int)
-
-  sealed trait MYST1
-  case object MYST1A extends MYST1
-  case object MYST1B extends MYST1
+  import Model._
 
   implicitly[NotGeneric[String]]
   implicitly[NotGeneric[String :: Int :: HNil]]
-  illTyped("implicitly[NotGeneric[MYCC1]]")
-  illTyped("implicitly[NotGeneric[MYST1]]")
+  illTyped("implicitly[NotGeneric[AA]]")
+  illTyped("implicitly[NotGeneric[IDAABBS]]")
 }

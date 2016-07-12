@@ -122,9 +122,16 @@ trait DeriveFFlat[A, S <: HList] {
 }
 
 trait DeriveFFlatBoilerplate {
-  // implicit class case1implicits[A, I1]
-  // implicit class case3implicits[A, I1, I2, I3]
-  // implicit class case4implicits[A, I1, I2, I3, I4]
+  implicit class case1implicits[A, I1: TypeTag, S <: HList]
+    (self: DeriveFFlat.Aux[A, I1 :: HNil, S]) {
+      def materialize[F[_]]
+        (implicit I1: F[I1], c: CanDerive[F]): F[A] = {
+          self.d.derive(new LiftF[F] {
+            def get[T](implicit t: TypeTag[T]): F[T] = I1.asInstanceOf[F[T]]
+          }, c)
+        }
+    }
+
   implicit class case2implicits[A, I1: TypeTag, I2: TypeTag, S <: HList]
     (self: DeriveFFlat.Aux[A, I1 :: I2 :: HNil, S]) {
       def materialize[F[_]]
@@ -140,6 +147,9 @@ trait DeriveFFlatBoilerplate {
           }, c)
         }
     }
+
+  // implicit class case3implicits[A, I1, I2, I3]
+  // implicit class case4implicits[A, I1, I2, I3, I4]
 
   implicit class case5implicits[A, I1: TypeTag, I2: TypeTag, I3: TypeTag, I4: TypeTag, I5: TypeTag, S <: HList]
     (self: DeriveFFlat.Aux[A, I1 :: I2 :: I3 :: I4 :: I5 :: HNil, S]) {
@@ -204,12 +214,22 @@ object DeriveFTest extends App {
 
   val showCat: Show[Cat] = deriveCatFlat.materialize[Show]
 
-  assert(showCat.show(Cat("sansan", Right(Dog(4)))) ==
-    "(sansan, [case: [case: 4]])")
+  assert(showCat.show(Cat("sansan", Right(Dog(4)))) == "(sansan, [case: [case: 4]])")
+  assert(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4)))))) == "(sansan, [case: (aslan, [case: [case: 4]])])")
 
-  assert(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4)))))) ==
-    "(sansan, [case: (aslan, [case: [case: 4]])])")
+  // TestDefns -----------------------------------------------------
 
-  println(showCat.show(Cat("sansan", Right(Dog(4)))))
-  println(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4)))))))
+  import TestDefns._
+
+  val deriveIList = the[DeriveF[IList[String], HNil]].flatten
+  val derivedSnoc = the[DeriveF[Snoc[String],  HNil]].flatten
+  val derivedTree = the[DeriveF[Tree[String],  HNil]].flatten
+
+  implicitly[deriveIList.FlatRepr =:= (String :: HNil)]
+  implicitly[derivedSnoc.FlatRepr =:= (String :: HNil)]
+  implicitly[derivedTree.FlatRepr =:= (String :: HNil)]
+
+  assert(deriveIList.materialize[Show].show(ICons("foo", INil[String]())) == "[case: (foo, INil())]")
+  assert(derivedSnoc.materialize[Show].show(SCons(SNil[String](), "bar")) == "[case: (SNil(), bar)]")
+  assert(derivedTree.materialize[Show].show(Node(Leaf("l1"), Leaf("l2"))) == "[case: [case: (Leaf(l1), Leaf(l2))]]")
 }

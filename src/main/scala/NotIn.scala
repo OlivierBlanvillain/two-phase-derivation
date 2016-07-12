@@ -14,7 +14,7 @@ object NotIn {
   implicit def notInHConsrecurse[H, T <: HList, U](implicit st : NotIn[T, U]): NotIn[H :: T, U] = evidence
 }
 
-object TestNotIn {
+object NotInTest {
   import shapeless.test.illTyped
 
   implicitly[NotIn[HNil, Boolean]]
