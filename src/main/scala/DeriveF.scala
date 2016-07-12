@@ -1,15 +1,18 @@
 import shapeless._
 import cats.data.Xor
-import cats.{Eval, Later, Now}
+import cats.Later
 import shapeless.ops.hlist.Selector
 import scala.reflect.runtime.universe.TypeTag
-import simulacrum.typeclass
 
 import cats.syntax.invariant._
 import cats.syntax.cartesian._
 
-@typeclass trait LiftF[F[_]] {
-  def get[T](implicit t: TypeTag[T]): Eval[F[T]]
+trait LiftF[F[_]] {
+  def get[T](implicit t: TypeTag[T]): F[T]
+}
+
+object LiftF {
+  def apply[F[_]](implicit t: LiftF[F]): LiftF[F] = t
 }
 
 /** First phase of automatic type class derivation for `A`. */
@@ -25,17 +28,19 @@ trait DeriveF[A, S <: HList] { self =>
     }
 }
 
-object DeriveF {
+trait LowPrioDeriveF {
   type Aux[A, R0, S <: HList] = DeriveF[A, S] { type Repr = R0 }
 
-  // h: HasNoGeneric[A] → DeriveF[A] { type Repr = A }
-  implicit def caseNoGeneric[A: TypeTag, S <: HList](implicit h: HasNoGeneric[A]): Aux[A, A, S] = new DeriveF[A, S] {
+  // h: NotGeneric[A] → DeriveF[A] { type Repr = A }
+  implicit def caseNotGeneric[A: TypeTag, S <: HList](implicit h: NotGeneric[A]): Aux[A, A, S] = new DeriveF[A, S] {
     type Repr = A
     def derive[F[_]: LiftF : CanDerive]: F[A] = {
-      LiftF[F].get[A].value
+      LiftF[F].get[A]
     }
   }
+}
 
+object DeriveF extends LowPrioDeriveF {
   // g: Generic[A], r: DeriveF[g.Repr] → DeriveF[A] { type Repr = g.Repr }
   implicit def caseGeneric[A: TypeTag, G, R, S <: HList]
     (implicit
@@ -48,8 +53,8 @@ object DeriveF {
         val tta = implicitly[TypeTag[A]]
 
         val memoizedLiftF: LiftF[F] = new LiftF[F] {
-          def get[T](implicit t: TypeTag[T]): Eval[F[T]] =
-            if(t == tta) Later(self.derive.asInstanceOf[F[T]]) else LiftF[F].get(t)
+          def get[T](implicit t: TypeTag[T]): F[T] =
+            if(t == tta) self.derive.asInstanceOf[F[T]] else LiftF[F].get(t)
         }
 
         r.value.derive[F](memoizedLiftF, CanDerive[F]).imap(g.from)(g.to)
@@ -59,7 +64,7 @@ object DeriveF {
   implicit def caseRecursion[A: TypeTag, S <: HList]
     (implicit s: Selector[S, A]): Aux[A, HNil, S] = new DeriveF[A, S] {
       type Repr = HNil
-      def derive[F[_]: LiftF : CanDerive]: F[A] = LiftF[F].get[A].value
+      def derive[F[_]: LiftF : CanDerive]: F[A] = LiftF[F].get[A]
     }
 
   // d: DeriveF[H] → DeriveF[H :: HNil] { type Repr = d.Repr }
@@ -127,11 +132,11 @@ trait DeriveFFlatBoilerplate {
           self.d.derive(new LiftF[F] {
             def tt[T](implicit t: TypeTag[T]): TypeTag[T] = t
 
-            val map: Map[TypeTag[_], Eval[F[_]]] =
-              Map(tt[I1] -> Now(I1), tt[I2] -> Now(I2))
+            val map: Map[TypeTag[_], F[_]] =
+              Map(tt[I1] -> I1, tt[I2] -> I2)
 
-            def get[T](implicit t: TypeTag[T]): Eval[F[T]] =
-              map(t).asInstanceOf[Eval[F[T]]]
+            def get[T](implicit t: TypeTag[T]): F[T] =
+              map(t).asInstanceOf[F[T]]
           }, c)
         }
     }
@@ -143,11 +148,11 @@ trait DeriveFFlatBoilerplate {
           self.d.derive(new LiftF[F] {
             def tt[T](implicit t: TypeTag[T]): TypeTag[T] = t
 
-            val map: Map[TypeTag[_], Eval[F[_]]] =
-              Map(tt[I1] -> Now(I1), tt[I2] -> Now(I2), tt[I3] -> Now(I3), tt[I4] -> Now(I4), tt[I5] -> Now(I5))
+            val map: Map[TypeTag[_], F[_]] =
+              Map(tt[I1] -> I1, tt[I2] -> I2, tt[I3] -> I3, tt[I4] -> I4, tt[I5] -> I5)
 
-            def get[T](implicit t: TypeTag[T]): Eval[F[T]] =
-              map(t).asInstanceOf[Eval[F[T]]]
+            def get[T](implicit t: TypeTag[T]): F[T] =
+              map(t).asInstanceOf[F[T]]
           }, c)
     }
 }
