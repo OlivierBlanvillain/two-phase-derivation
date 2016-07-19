@@ -1,6 +1,6 @@
-This project is an experiment with an alternative automatic type class derivation mechanism. The main objective was to provide accurate error reporting, instead of the opaque `implicit not found` that are encountered with the traditional shapeless way of doing type class derivation.
+This project is an experimental automatic type class derivation mechanism with accurate error reporting. Instead of a single opaque `could not find implicit value` exposed by the traditional shapeless way, this technique precisely reports the missing implicits.
 
-Here is an overview of the technique:
+Here is an overview:
 
 ```scala
 case class Bar(b: Boolean, i: Int)
@@ -8,7 +8,7 @@ case class Foo(s: String, b: Bar)
 
 // 1st phase, slower than current derivation (could maybe be rewritten as a single macro)
 // Note that this phase never fails, no mater what implicits are in scope.
-val deriving = Deriving[Foo].gen
+val deriving: Deriving[Foo] = Deriving[Foo].gen
 
 // 2nd phase, very fast, and reports nice errors:
 val showFoo = deriving.materialize[cats.Show]
@@ -18,7 +18,7 @@ val ordFoo  = deriving.materialize[scala.math.Ordering]
 // Here materialize is added to `Deriving` with implicit classes, one per `HList` arity:
 
 def materialize[F[_]: CanDerive]
-  (implicit I1: F[Boolean], I2: F[Int], I3: F[String]): F[Foo]
+  (implicit I1: F[Boolean], I2: F[Int], I3: F[String]): F[Foo] = ...
 ```
 
 The key for this technique is to split the work into two phases. First, it computes the complete generic representation of a data type, as a tree of `HList` and `Coproduct`, using the macros already present in shapeless. Second, it materializes the desired type class by summoning and combining instances for all types at leaf position in the generic representation. This separation has some nice consequences:
