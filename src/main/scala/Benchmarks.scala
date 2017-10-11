@@ -1,16 +1,15 @@
-import cats.Show
 import shapeless._
 import scala.concurrent.duration.Duration
 
-object Benchmarks extends App {
+object Benchmarks { // extends App {
   // Waiting for 2.3.2...
 
-  import Model._
-  import cats.implicits._
-  import shapeless.test.{compileTime => c}
-  // def c(s: String): Duration = ???
-  val deriveF = Deriving[IDAABBS].gen
-  val deriveS = the[DeriveS[IDAABBS]]
+  // import Model._
+  // import cats.implicits._
+  // import shapeless.test.{compileTime => c}
+  // val deriveF = Deriving[IDAABBS].gen
+  // val deriveS = the[DeriveS[IDAABBS]]
+  def c(s: String): Duration = ???
 
   def s(d: => Duration): String = s"        ${(d.toNanos / 1E9).toString.take(6)} seconds        |"
 

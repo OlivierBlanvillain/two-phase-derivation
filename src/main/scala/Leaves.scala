@@ -9,7 +9,7 @@ trait LeavesCandies {
   type Aux[Repr, R0 <: HL] = Leaves[Repr] { type FlatRepr = R0 }
   protected type HL = HList
   protected type CO = Coproduct
-  protected def instance: Aux[Any, HNil] = new Leaves[Any] { type FlatRepr = HNil }
+  protected val instance: Aux[Any, HNil] = new Leaves[Any] { type FlatRepr = HNil }
   protected def ev[Repr, R0 <: HL]: Aux[Repr, R0] = instance.asInstanceOf[Aux[Repr, R0]]
 }
 
