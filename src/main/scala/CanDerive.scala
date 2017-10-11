@@ -1,11 +1,10 @@
 import cats.{Cartesian, Show}
 import cats.functor.Invariant
-import cats.data.Xor
 import cats.Eval
 
-/** Lazy `Xor` version of `Cartesian`. */
+/** Lazy `Either` version of `Cartesian`. */
 trait DisjointCartesian[F[_]] {
-  def coproduct[A, B](fa: Eval[F[A]], fb: Eval[F[B]]): F[Xor[A, B]]
+  def coproduct[A, B](fa: Eval[F[A]], fb: Eval[F[B]]): F[Either[A, B]]
 }
 
 /** All you need for automatic type class derivation of `F[_]`. */
@@ -23,10 +22,10 @@ object CanDerive {
       def show(b: B): String = fa.show(g(b))
     }
 
-    def coproduct[A, B](fa: Eval[Show[A]], fb: Eval[Show[B]]): Show[Xor[A, B]] = new Show[Xor[A, B]] {
-      def show(ab: Xor[A, B]): String = "[case: " + (ab match {
-        case Xor.Left (a) => fa.value.show(a)
-        case Xor.Right(b) => fb.value.show(b)
+    def coproduct[A, B](fa: Eval[Show[A]], fb: Eval[Show[B]]): Show[Either[A, B]] = new Show[Either[A, B]] {
+      def show(ab: Either[A, B]): String = "[case: " + (ab match {
+        case Left (a) => fa.value.show(a)
+        case Right(b) => fb.value.show(b)
       }) + "]"
     }
   }

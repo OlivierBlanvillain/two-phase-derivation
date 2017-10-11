@@ -1,6 +1,5 @@
 import shapeless._
 import shapeless.ops.coproduct.ToHList
-import cats.data.Xor
 import cats.Later
 
 import cats.syntax.invariant._
@@ -166,11 +165,11 @@ object DeriveS extends DeriveSBoilerplate with LowPrioDeriveS {
         def derive[F[_]] (implicit l: LiftS[F, Repr], c: CanDerive[F]): F[H :+: T] =
           CanDerive[F].coproduct(Later(h.derive(l.leftSide[HR, TR], c)), Later(t.value.derive[F](l.rightSide[HR, TR], c)))
             .imap {
-              case Xor.Left (a) => Inl(a)
-              case Xor.Right(b) => Inr(b)
+              case Left (a) => Inl(a)
+              case Right(b) => Inr(b)
             } {
-              case Inl(a) => Xor.Left (a)
-              case Inr(b) => Xor.Right(b)
+              case Inl(a) => Left (a)
+              case Inr(b) => Right(b)
             }
       }
 }

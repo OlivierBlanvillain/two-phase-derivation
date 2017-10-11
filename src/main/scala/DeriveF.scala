@@ -1,5 +1,4 @@
 import shapeless._
-import cats.data.Xor
 import cats.Later
 import shapeless.ops.hlist.Selector
 import scala.reflect.runtime.universe.TypeTag
@@ -105,11 +104,11 @@ object DeriveF extends LowPrioDeriveF {
         type TreeRepr = HR :+: TR
         def derive[F[_]: LiftF : CanDerive]: F[H :+: T] = {
           CanDerive[F].coproduct(Later(h.derive), Later(t.value.derive[F])).imap {
-            case Xor.Left(a)  => Inl(a)
-            case Xor.Right(b) => Inr(b)
+            case Left(a)  => Inl(a)
+            case Right(b) => Inr(b)
           } {
-            case Inl(a) => Xor.Left(a)
-            case Inr(b) => Xor.Right(b)
+            case Inl(a) => Left(a)
+            case Inr(b) => Right(b)
           }
         }
       }
@@ -217,7 +216,7 @@ object DeriveFTest extends App {
     "derivingIDAABS.materialize[Show]",
     "could not find implicit value for parameter I1: cats.Show\\[Int\\].*")
 
-  import cats.std.all._
+  import cats.implicits._
   val showIDAABBS: Show[IDAABBS] = derivingIDAABS.materialize[Show]
   assert(showIDAABBS.show(instance) == showResult)
 
