@@ -7,6 +7,32 @@ object ADTs {
   case class DAABB(d: Double, aabb: AABB)
   case class IDAABBS(i: Int, daabb: DAABB, s: String)
 
+  implicit val genAABB: Generic[AABB] { type Repr = AA :+: BB :+: CNil } = new Generic[AABB] {
+    type Repr = AA :+: BB :+: CNil
+    def to(t: AABB): Repr = ???
+    def from(r: Repr): AABB = ???
+  }
+  implicit val genAA: Generic[AA] { type Repr = String :: HNil } = new Generic[AA] {
+    type Repr = String :: HNil
+    def to(t: AA): Repr = ???
+    def from(r: Repr): AA = ???
+  }
+  implicit val genBB: Generic[BB] { type Repr = String :: HNil } = new Generic[BB] {
+    type Repr = String :: HNil
+    def to(t: BB): Repr = ???
+    def from(r: Repr): BB = ???
+  }
+  implicit val genDAABB: Generic[DAABB] { type Repr = Double :: AABB :: HNil } = new Generic[DAABB] {
+    type Repr = Double :: AABB :: HNil
+    def to(t: DAABB): Repr = ???
+    def from(r: Repr): DAABB = ???
+  }
+  implicit val genIDAABBS: Generic[IDAABBS] { type Repr = Int :: DAABB :: String :: HNil } = new Generic[IDAABBS] {
+    type Repr = Int :: DAABB :: String :: HNil
+    def to(t: IDAABBS): Repr = ???
+    def from(r: Repr): IDAABBS = ???
+  }
+
   val instance: IDAABBS = IDAABBS(1, DAABB(1.1, AA("aa")), "s")
   val showResult: String = "(1, ((1.1, [case: aa]), s))"
 
