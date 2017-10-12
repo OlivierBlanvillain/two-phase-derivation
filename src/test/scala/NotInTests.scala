@@ -1,7 +1,5 @@
 package deriving
 
-import shapeless._
-
 object NotInTest {
   import shapeless.test.illTyped
 

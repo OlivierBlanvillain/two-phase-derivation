@@ -1,7 +1,5 @@
 package deriving
 
-import shapeless._
-
 object DeriveFTest extends App {
   import shapeless.test.illTyped
   import ADTs._

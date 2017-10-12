@@ -153,6 +153,4 @@ The following table shows the result when deriving a `Show[IDAABBS]` instance (w
 |-------------------------------|:-----------------------------:|
 |`Deriving[IDAABBS].gen        `|         0.4893 seconds        |
 |`deriveF.materialize[Show]    `|         0.0435 seconds        |
-|`the[DeriveS[IDAABBS]]        `|         25.141 seconds        |
-|`deriveS.materialize[Show]    `|         0.0044 seconds        |
 |`the[TShow[IDAABBS]]          `|         0.0934 seconds        |

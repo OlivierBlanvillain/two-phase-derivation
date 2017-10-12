@@ -12,6 +12,6 @@ trait NotGenericLowPrio {
 }
 
 object NotGeneric extends NotGenericLowPrio {
-  implicit def notGenericAmbiguity1[A: Generic]: NotGeneric[A] = unexpected
-  implicit def notGenericAmbiguity2[A: Generic]: NotGeneric[A] = unexpected
+  implicit def notGenericAmbiguity1[A: Generic]: NotGeneric[A] = ???
+  implicit def notGenericAmbiguity2[A: Generic]: NotGeneric[A] = ???
 }

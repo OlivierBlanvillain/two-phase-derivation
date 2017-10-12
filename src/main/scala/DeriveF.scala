@@ -1,14 +1,8 @@
 package deriving
 
-import shapeless._
-import shapeless.ops.hlist.Selector
+// import shapeless._
 import scala.reflect.runtime.universe.TypeTag
 import Syntax._
-
-class Later[A](val value: () => A)
-object Later {
-  def apply[A](value: => A): Later[A] = new Later(() => value)
-}
 
 trait LiftF[F[_]] {
   def get[T](implicit t: TypeTag[T]): F[T]
@@ -44,7 +38,7 @@ object DeriveF extends LowPrioDeriveF {
     (implicit
       n: NotIn[S, A],
       g: Generic.Aux[A, G],
-      r: Lazy[Aux[G, R, A :: S]]
+      r: shapeless.Lazy[Aux[G, R, A :: S]]
     ): Aux[A, R, S] = new DeriveF[A, S] { self =>
       type TreeRepr = R
       def derive[F[_]: LiftF : CanDerive]: F[A] = {
@@ -82,12 +76,12 @@ object DeriveF extends LowPrioDeriveF {
   implicit def caseHCons[H, HR, T <: HList, TR <: HList, S <: HList]
     (implicit
       h: Aux[H, HR, S],
-      t: Lazy[Aux[T, TR, S]]
+      t: shapeless.Lazy[Aux[T, TR, S]]
     ): Aux[H :: T, HR :: TR, S] =
       new DeriveF[H :: T, S] {
         type TreeRepr = HR :: TR
         def derive[F[_]: LiftF : CanDerive]: F[H :: T] = {
-          h.derive.product(t.value.derive[F]).imap { case (a, b) => a :: b } { case a :: b => (a, b) }
+          h.derive.product(t.value.derive[F]).imap { case (a, b) => ::(a, b) } { case a :: b => (a, b) }
         }
       }
 
@@ -102,7 +96,7 @@ object DeriveF extends LowPrioDeriveF {
   implicit def caseCCons[H, HR, T <: Coproduct, TR <: Coproduct, S <: HList]
     (implicit
       h: Aux[H, HR, S],
-      t: Lazy[Aux[T, TR, S]]
+      t: shapeless.Lazy[Aux[T, TR, S]]
     ): Aux[H :+: T, HR :+: TR, S] =
       new DeriveF[H :+: T, S] {
         type TreeRepr = HR :+: TR

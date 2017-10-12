@@ -1,7 +1,5 @@
 package deriving
 
-import shapeless._
-
 /** Flattens a tree of `HList` / `Coproduct` into a single `HList` contains all types at leave position. */
 trait Leaves[Repr] {
   type FlatRepr <: HList
