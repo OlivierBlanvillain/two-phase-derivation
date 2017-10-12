@@ -1,3 +1,5 @@
+package deriving
+
 import shapeless._
 
 /** Flattens a tree of `HList` / `Coproduct` into a single `HList` contains all types at leave position. */
@@ -32,12 +34,4 @@ object Leaves extends LeavesLowPriority {
   implicit def hcNil[L <: HL, R <: HL](implicit h: Aux[L, R]): Aux[CNil ::  L, R] = ev
   implicit def chNil[L <: CO, R <: HL](implicit h: Aux[L, R]): Aux[HNil :+: L, R] = ev
   implicit def ccNil[L <: CO, R <: HL](implicit h: Aux[L, R]): Aux[CNil :+: L, R] = ev
-}
-
-object LeavesTest {
-  type TestTree = Int :: (Double :: (Boolean :+: Byte :+: CNil) :: HNil) :: String :: HNil
-  type Expected = Int :: Double :: Boolean :: Byte :: String :: HNil
-
-  val leafs = the[Leaves[TestTree]]
-  implicitly[leafs.FlatRepr =:= Expected]
 }

@@ -1,11 +1,13 @@
+package deriving
+
 import shapeless._
 import scala.concurrent.duration.Duration
 
 object Benchmarks { // extends App {
   // Waiting for 2.3.2...
 
-  // import Model._
-  // import cats.implicits._
+  // import ADTs._
+  // import Implicits._
   // import shapeless.test.{compileTime => c}
   // val deriveF = Deriving[IDAABBS].gen
   // val deriveS = the[DeriveS[IDAABBS]]

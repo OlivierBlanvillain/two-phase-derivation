@@ -1,6 +1,16 @@
-// https://github.com/milessabin/kittens/blob/v1.0.0-M3/core/src/test/scala/cats/derived/adtdefns.scala
+package deriving
 
-object TestDefns {
+object ADTs {
+  sealed trait AABB
+  case class AA(a: String) extends AABB
+  case class BB(a: String) extends AABB
+  case class DAABB(d: Double, aabb: AABB)
+  case class IDAABBS(i: Int, daabb: DAABB, s: String)
+
+  val instance: IDAABBS = IDAABBS(1, DAABB(1.1, AA("aa")), "s")
+  val showResult: String = "(1, ((1.1, [case: aa]), s))"
+
+  // https://github.com/milessabin/kittens/blob/v1.0.0-M3/core/src/test/scala/cats/derived/adtdefns.scala
   sealed trait IList[A]
   final case class ICons[A](head: A, tail: IList[A]) extends IList[A]
   final case class INil[A]() extends IList[A]

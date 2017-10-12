@@ -1,12 +1,8 @@
+package deriving
+
+// cats.Show
 trait Show[A] {
   def show(a: A): String
-}
-
-object Implicits {
-  implicit val catsStdShowForString: Show[String] = new Show[String] { def show(x: String) = x }
-  implicit val catsStdShowForDouble: Show[Double] = new Show[Double] { def show(x: Double) = x.toString }
-  implicit val catsStdShowForInt: Show[Int]       = new Show[Int]    { def show(x: Int)    = x.toString }
-  implicit val catsStdShowForLong: Show[Long]     = new Show[Long]   { def show(x: Long)   = x.toString }
 }
 
 // cats.Cartesian
@@ -29,16 +25,13 @@ object Syntax {
   implicit class InvariantSyntax[F[_]: Invariant, A](fa: F[A]) {
     def imap[B](f: A => B)(g: B => A): F[B] = implicitly[Invariant[F]].imap(fa)(f)(g)
   }
-
   implicit class CartesianSyntax[F[_]: Cartesian, A](fa: F[A]) {
     def product[B](fb: F[B]): F[(A, B)] = implicitly[Cartesian[F]].product(fa, fb)
   }
-
   implicit class CocartesianSyntax[F[_]: Cocartesian, A](fa: F[A]) {
     def coproduct[B](fb: F[B]): F[Either[A, B]] = implicitly[Cocartesian[F]].coproduct(fa, fb)
   }
 }
-
 
 /** All you need for automatic type class derivation of `F[_]`. */
 trait CanDerive[F[_]] extends Invariant[F] with Cartesian[F] with Cocartesian[F]
