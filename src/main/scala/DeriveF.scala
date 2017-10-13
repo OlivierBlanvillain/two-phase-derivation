@@ -1,6 +1,5 @@
 package deriving
 
-// import shapeless._
 import scala.reflect.runtime.universe.TypeTag
 import Syntax._
 

@@ -1,6 +1,5 @@
 package deriving
 
-import shapeless._
 import scala.concurrent.duration.Duration
 
 object Benchmarks { // extends App {
@@ -35,7 +34,7 @@ object TShow {
       def show(a: A): String = s.show(a)
     }
 
-  implicit def showGeneric[F, G](implicit gen: Generic.Aux[F, G], sg: Lazy[TShow[G]]): TShow[F] =
+  implicit def showGeneric[F, G](implicit gen: Generic.Aux[F, G], sg: shapeless.Lazy[TShow[G]]): TShow[F] =
     new TShow[F] {
       def show(f: F) = sg.value.show(gen.to(f))
     }
@@ -47,8 +46,8 @@ object TShow {
 
   implicit def showHCons[H, T <: HList]
     (implicit
-      sv: Lazy[TShow[H]],
-      st: Lazy[TShow[T]]
+      sv: shapeless.Lazy[TShow[H]],
+      st: shapeless.Lazy[TShow[T]]
     ): TShow[H :: T] =
       new TShow[H :: T] {
         def show(p: H :: T): String = {
@@ -65,8 +64,8 @@ object TShow {
 
   implicit def showCCons[H, T <: Coproduct]
     (implicit
-      sv: Lazy[TShow[H]],
-      st: Lazy[TShow[T]]
+      sv: shapeless.Lazy[TShow[H]],
+      st: shapeless.Lazy[TShow[T]]
     ): TShow[H :+: T] =
       new TShow[H :+: T] {
         def show(c: H :+: T): String =

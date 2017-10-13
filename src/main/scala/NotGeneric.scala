@@ -1,8 +1,6 @@
 package deriving
 
-import shapeless._
-
-/** Negation of `shapeless.Generic`, only exists when `A` does not have a `Generic` representation. */
+/** Negation of `Generic`, only exists when `A` does not have a `Generic` representation. */
 trait NotGeneric[A]
 
 trait NotGenericLowPrio {

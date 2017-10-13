@@ -1,8 +1,6 @@
 package deriving
 
-// import shapeless._
-
-/** Negation of `shapeless.ops.hlist.Selector`, only exists when `L` does not contain `U`. */
+/** Negation of `hlist.Selector`, only exists when `L` does not contain `U`. */
 trait NotIn[L <: HList, U]
 
 object NotIn {

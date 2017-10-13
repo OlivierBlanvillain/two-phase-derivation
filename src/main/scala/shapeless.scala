@@ -1,8 +1,5 @@
 package deriving
 
-// import shapeless._
-import annotation.implicitNotFound
-
 // https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/hlists.scala
 sealed trait HList extends Product with Serializable
 final case class ::[+H, +T <: HList](head: H, tail: T) extends HList
@@ -28,20 +25,12 @@ object Generic {
 }
 
 // https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/ops/hlists.scala
-/**
- * Type class supporting access to the first element of this `HList` of type `U`. Available only if this `HList`
- * contains an element of type `U`.
- *
- * @author Miles Sabin
- */
-@implicitNotFound("Implicit not found: shapeless.Ops.Selector[${L}, ${U}]. You requested an element of type ${U}, but there is none in the HList ${L}.")
 trait Selector[L <: HList, U] {
   type Out = U
   def apply(l: L): U
 }
 
 object Selector {
-
   def apply[L <: HList, U](implicit selector: Selector[L, U]): Selector[L, U] = selector
 
   implicit def select[H, T <: HList]: Selector[H :: T, H] =
@@ -54,4 +43,10 @@ object Selector {
       new Selector[H :: T, U] {
         def apply(l: H :: T) = st(l.tail)
       }
+}
+
+// https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/typeoperators.scala
+// In Dotty we can remove the <: AnyRef, making this effectifely equivalant to the shapeless macro!
+object the {
+  def apply[A <: AnyRef](implicit a: A): a.type = a
 }
