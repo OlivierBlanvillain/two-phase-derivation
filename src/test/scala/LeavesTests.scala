@@ -1,6 +1,6 @@
 package deriving
 
-object LeavesTest {
+object LeavesTests {
   type TestTree = Int :: (Double :: (Boolean :+: Byte :+: CNil) :: HNil) :: String :: HNil
   type Expected = Int :: Double :: Boolean :: Byte :: String :: HNil
 

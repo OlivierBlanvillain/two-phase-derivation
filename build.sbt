@@ -1,8 +1,10 @@
+// scalaVersion := "0.3.0-RC2"
+
 scalaVersion := "2.12.3"
 
 libraryDependencies := Seq(
-  "com.chuusai"   %% "shapeless" % "2.3.2",
-  "org.typelevel" %% "cats-core" % "1.0.0-MF")
+  "com.chuusai" %% "shapeless" % "2.3.2",
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value)
 
 scalacOptions := Seq(
   "-deprecation",
@@ -13,7 +15,7 @@ scalacOptions := Seq(
   "-language:implicitConversions",
   "-language:experimental.macros",
   "-unchecked",
-  "-Xfatal-warnings",
+  // "-Xfatal-warnings",
   "-Xlint:-unused,_",
   "-Yno-adapted-args",
   "-Ywarn-dead-code",

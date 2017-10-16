@@ -45,8 +45,73 @@ object Selector {
       }
 }
 
+// https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/ops/coproduct.scala
+trait ToHList[L <: Coproduct] { type Out <: HList }
+
+object ToHList {
+  def apply[L <: Coproduct](implicit thl: ToHList[L]): Aux[L, thl.Out] = thl
+
+  type Aux[L <: Coproduct, Out0 <: HList] = ToHList[L] { type Out = Out0 }
+
+  implicit val cnilToHList: Aux[CNil, HNil] =
+    new ToHList[CNil] {
+      type Out = HNil
+    }
+
+  implicit def cconsToHList[H, T <: Coproduct](implicit ut: ToHList[T]): Aux[H :+: T, H :: ut.Out] =
+    new ToHList[H :+: T] {
+      type Out = H :: ut.Out
+    }
+}
+
+// https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/lazy.scala
+trait LAZY[+T] {
+  val value: T
+}
+
+object LAZY {
+  implicit def apply[T](implicit t: /*=>*/ T): LAZY[T] =
+    new LAZY[T] {
+      lazy val value = t
+    }
+}
+
 // https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/typeoperators.scala
 // In Dotty we can remove the <: AnyRef, making this effectifely equivalant to the shapeless macro!
 object the {
   def apply[A <: AnyRef](implicit a: A): a.type = a
+}
+
+/** Custom version of `shapeless.ops.hlist.Prepend` extended with a `split`
+ *  method to reverse the appending.
+ */
+trait Append[P <: HList, S <: HList] {
+  type Out <: HList
+  def apply(p: P, s: S): Out
+  def split(o: Out): (P, S)
+}
+
+trait LowPriorityAppend {
+  type Aux[P <: HList, S <: HList, Out0 <: HList] = Append[P, S] { type Out = Out0 }
+
+  implicit def hlistAppend[PH, PT <: HList, S <: HList, AOut <: HList]
+    (implicit a: Aux[PT, S, AOut]): Aux[PH :: PT, S, PH :: AOut] =
+      new Append[PH :: PT, S] {
+        type Out = PH :: AOut
+        def apply(p: PH :: PT, s: S): Out = ::(p.head, a(p.tail, s))
+        def split(o: Out): (PH :: PT, S) = {
+          val ph = o.head
+          val (pt, s) = a.split(o.tail)
+          (::(ph, pt), s)
+        }
+      }
+}
+
+object Append extends LowPriorityAppend {
+  implicit def hnilAppend[S <: HList]: Aux[HNil, S, S] =
+    new Append[HNil, S] {
+      type Out = S
+      def apply(p: HNil, s: S): S = s
+      def split(o: Out): (HNil, S) = (HNil, o)
+    }
 }

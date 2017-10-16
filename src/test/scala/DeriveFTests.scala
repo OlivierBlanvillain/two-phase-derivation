@@ -1,11 +1,11 @@
 package deriving
 
-object DeriveFTest extends App {
+object DeriveFTests {
   import ADTs._
 
   // Non Recursive HList/Coproduct structure ----------------------------------
 
-  val derivingIDAABS = Deriving[IDAABBS].gen
+  val derivingIDAABS = DerivingF[IDAABBS].gen
 
   implicitly[derivingIDAABS.TreeRepr =:= (
     Int ::
@@ -24,38 +24,32 @@ object DeriveFTest extends App {
   // illTyped derivingIDAABS.materialize[Show]
   // "could not find implicit value for parameter I1: deriving.Show\\[Int\\].*"
 
-  object Implicits {
-    implicit val catsStdShowForString: Show[String] = new Show[String] { def show(x: String) = x }
-    implicit val catsStdShowForDouble: Show[Double] = new Show[Double] { def show(x: Double) = x.toString }
-    implicit val catsStdShowForInt: Show[Int]       = new Show[Int]    { def show(x: Int)    = x.toString }
-    implicit val catsStdShowForLong: Show[Long]     = new Show[Long]   { def show(x: Long)   = x.toString }
-  }
-  import Implicits._
+  import Instances._
 
   val showIDAABBS: Show[IDAABBS] = derivingIDAABS.materialize[Show]
   /*assert*/(showIDAABBS.show(IDAABBSInstance) == IDAABBSShowResult)
 
   // Either Recursion ---------------------------------------------------------
 
-  val deriveingCat = Deriving[Cat].gen
+  val deriveingCat = DerivingF[Cat].gen
   implicitly[deriveingCat.TreeRepr =:= (String :: ((HNil :: HNil) :+: ((Long :: HNil) :: HNil) :+: CNil) :: HNil)]
   implicitly[deriveingCat.FlatRepr =:= (String :: Long :: HNil)]
 
   val showCat: Show[Cat] = deriveingCat.materialize[Show]
-  /*assert*/(showCat.show(Cat("sansan", Right(Dog(4)))) == "(sansan, [case: [case: 4]])")
-  /*assert*/(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4)))))) == "(sansan, [case: (aslan, [case: [case: 4]])])")
+  /*assert*/println(showCat.show(Cat("sansan", Right(Dog(4))))) //  == "(sansan, [case: [case: 4]])")
+  /*assert*/println(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4))))))) //  == "(sansan, [case: (aslan, [case: [case: 4]])])")
 
   // TestDefns ----------------------------------------------------------------
 
-  val derivingIList = Deriving[IList[String]].gen
+  val derivingIList = DerivingF[IList[String]].gen
   implicitly[derivingIList.TreeRepr =:= ((String :: HNil :: HNil) :+: HNil :+: CNil)]
   implicitly[derivingIList.FlatRepr =:= (String :: HNil)]
 
-  val derivingdSnoc = Deriving[Snoc[String]].gen
+  val derivingdSnoc = DerivingF[Snoc[String]].gen
   implicitly[derivingdSnoc.TreeRepr =:= ((HNil :: String :: HNil) :+: HNil :+: CNil)]
   implicitly[derivingdSnoc.FlatRepr =:= (String :: HNil)]
 
-  val derivingdTree = Deriving[Tree[String]].gen
+  val derivingdTree = DerivingF[Tree[String]].gen
   implicitly[derivingdTree.TreeRepr =:= ((String :: HNil) :+: (HNil :: HNil :: HNil) :+: CNil)]
   implicitly[derivingdTree.FlatRepr =:= (String :: HNil)]
 

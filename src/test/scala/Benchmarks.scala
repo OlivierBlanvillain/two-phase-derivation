@@ -1,26 +1,39 @@
 package deriving
 
-import scala.concurrent.duration.Duration
+// import scala.concurrent.duration.Duration
 
 object Benchmarks { // extends App {
   // Waiting for 2.3.2...
 
-  // import ADTs._
-  // import Implicits._
+  import ADTs._
+  import Instances._
   // import shapeless.test.{compileTime => c}
-  // val deriveF = Deriving[IDAABBS].gen
+  val deriveF = DerivingF[IDAABBS].gen
+
   // val deriveS = the[DeriveS[IDAABBS]]
-  def c(s: String): Duration = ???
 
-  def s(d: => Duration): String = s"        ${(d.toNanos / 1E9).toString.take(6)} seconds        |"
+  // def c(s: String): Duration = ???
 
-  println("|          Scala Code           | " +     "       Compilation Time       |")
-  println("|-------------------------------| " +     "----------------------------- |")
-  println("|`Deriving[IDAABBS].gen        `| " + s(c("Deriving[IDAABBS].gen        ")))
-  println("|`deriveF.materialize[Show]    `| " + s(c("deriveF.materialize[Show]    ")))
-  println("|`the[DeriveS[IDAABBS]]        `| " + s(c("the[DeriveS[IDAABBS]]        ")))
-  println("|`deriveS.materialize[Show]    `| " + s(c("deriveS.materialize[Show]    ")))
-  println("|`the[TShow[IDAABBS]]          `| " + s(c("the[TShow[IDAABBS]]          ")))
+  // def s(d: => Duration): String = s"        ${(d.toNanos / 1E9).toString.take(6)} seconds        |"
+
+  // println("|          Scala Code           | " +     "       Compilation Time       |")
+  // println("|-------------------------------| " +     "----------------------------- |")
+  // println("|`Deriving[IDAABBS].gen        `| " + s(c("Deriving[IDAABBS].gen        ")))
+  // println("|`deriveF.materialize[Show]    `| " + s(c("deriveF.materialize[Show]    ")))
+  // println("|`the[DeriveS[IDAABBS]]        `| " + s(c("the[DeriveS[IDAABBS]]        ")))
+  // println("|`deriveS.materialize[Show]    `| " + s(c("deriveS.materialize[Show]    ")))
+  // println("|`the[TShow[IDAABBS]]          `| " + s(c("the[TShow[IDAABBS]]          ")))
+
+
+  // Deriving[IDAABBS].gen
+
+  deriveF.materialize[Show]
+
+  // the[DeriveS[IDAABBS]]
+
+  // deriveS.materialize[Show]
+
+  // the[TShow[IDAABBS]]
 }
 
 trait TShow[F] {
