@@ -20,10 +20,6 @@ trait Generic[T] {
   def from(r: Repr): T
 }
 
-object Generic {
-  type Aux[T, Repr0] = Generic[T] { type Repr = Repr0 }
-}
-
 // https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/ops/hlists.scala
 trait Selector[L <: HList, U] {
   type Out = U
@@ -61,18 +57,6 @@ object ToHList {
   implicit def cconsToHList[H, T <: Coproduct](implicit ut: ToHList[T]): Aux[H :+: T, H :: ut.Out] =
     new ToHList[H :+: T] {
       type Out = H :: ut.Out
-    }
-}
-
-// https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/lazy.scala
-trait LAZY[+T] {
-  val value: T
-}
-
-object LAZY {
-  implicit def apply[T](implicit t: /*=>*/ T): LAZY[T] =
-    new LAZY[T] {
-      lazy val value = t
     }
 }
 

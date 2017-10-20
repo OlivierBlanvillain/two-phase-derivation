@@ -77,27 +77,27 @@ trait LowerPriorityDeriveS {
 trait LowPriorityDeriveS extends LowerPriorityDeriveS {
   implicit def caseHCons[H, HR <: HList, T <: HList, TR <: HList, LR <: HList, S <: HList]
     (implicit
-      t: shapeless.Lazy[DeriveS.Aux[T, TR, S]],
-      h: DeriveS.Aux[H, HR, S],
+      t: => DeriveS.Aux[T, TR, S],
+      h: => DeriveS.Aux[H, HR, S],
       p: Append.Aux[HR, TR, LR]
     ): DeriveS.Aux[H :: T, LR, S] =
       new DeriveS[H :: T, S] {
         type Repr = LR
         def derive[F[_]](implicit l: LiftS[F, LR], s: LiftS[F, S], c: CanDerive[F]): F[H :: T] =
-          h.derive(l.leftSide[HR, TR], s, c).product(t.value.derive[F](l.rightSide[HR, TR], s, c))
+          h.derive(l.leftSide[HR, TR], s, c).product(t.derive[F](l.rightSide[HR, TR], s, c))
             .imap { case (a, b) => ::(a, b) } { case ::(a, b) => (a, b) }
       }
 
   implicit def caseCCons[H, HR <: HList, T <: Coproduct, TR <: HList, LR <: HList, S <: HList]
     (implicit
-      t: shapeless.Lazy[DeriveS.Aux[T, TR, S]],
-      h: DeriveS.Aux[H, HR, S],
+      t: => DeriveS.Aux[T, TR, S],
+      h: => DeriveS.Aux[H, HR, S],
       p: Append.Aux[HR, TR, LR]
     ): DeriveS.Aux[H :+: T, LR, S] =
       new DeriveS[H :+: T, S] {
         type Repr = LR
         def derive[F[_]](implicit l: LiftS[F, LR], s: LiftS[F, S], c: CanDerive[F]): F[H :+: T] =
-          CanDerive[F].coproduct(h.derive(l.leftSide[HR, TR], s, c), t.value.derive[F](l.rightSide[HR, TR], s, c))
+          CanDerive[F].coproduct(h.derive(l.leftSide[HR, TR], s, c), t.derive[F](l.rightSide[HR, TR], s, c))
             .imap {
               case Left (a) => Inl(a)
               case Right(b) => Inr(b)
@@ -112,14 +112,14 @@ object DeriveS extends DeriveSBoilerplate with LowPriorityDeriveS {
   implicit def caseGeneric[A, G, R <: HList, S <: HList]
     (implicit
       n: NotIn[S, A],
-      g: Generic.Aux[A, G],
-      r: shapeless.Lazy[DeriveS.Aux[G, R, A :: S]]
+      g: Generic[A] { type Repr = G },
+      r: => DeriveS.Aux[G, R, A :: S]
     ): DeriveS.Aux[A, R, S] = new DeriveS[A, S] {
       type Repr = R
       def derive[F[_]](implicit l: LiftS[F, R], s: LiftS[F, S], c: CanDerive[F]): F[A] = {
         var fa: F[A] = null.asInstanceOf[F[A]]
         val seen = new LiftS[F, A :: S] { def instances = ::(fa.asInstanceOf[A], s.instances) }
-        fa = r.value.derive[F](l, seen, c).imap(g.from)(g.to)
+        fa = r.derive[F](l, seen, c).imap(g.from)(g.to)
         fa
       }
     }

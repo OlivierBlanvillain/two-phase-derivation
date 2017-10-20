@@ -10,24 +10,25 @@ object DeriveSTests {
   val showIDAABBS: Show[IDAABBS] = deriveIDAABBS.materialize[Show]
   /*assert*/(showIDAABBS.show(IDAABBSInstance) == IDAABBSShowResult)
 
-  val deriveingDog = DerivingS[Dog].gen
-  implicitly[deriveingDog.Repr =:= (Long :: HNil)]
+  val derivingDog = DerivingS[Dog].gen
+  implicitly[derivingDog.Repr =:= (Long :: HNil)]
 
-  val deriveingCat = DerivingS[Cat].gen
-  implicitly[deriveingCat.Repr =:= (String :: Long :: HNil)]
+  val derivingCat = DerivingS[Cat].gen
+  val s: DeriveS[Cat, HNil]{ type Repr = String :: Long :: HNil } = derivingCat
+  implicitly[derivingCat.Repr =:= (String :: Long :: HNil)]
 
-  val showCat: Show[Cat] = deriveingCat.materialize[Show]
+  val showCat: Show[Cat] = derivingCat.materialize[Show]
   /*assert*/println(showCat.show(Cat("sansan", Right(Dog(4))))) //  == "(sansan, [case: [case: 4]])")
   /*assert*/println(showCat.show(Cat("sansan", Left(Cat("aslan", Right(Dog(4))))))) //  == "(sansan, [case: (aslan, [case: [case: 4]])])")
 
   // TestDefns ----------------------------------------------------------------
 
-  // val derivingIList = DerivingS[IList[String]].gen
-  // implicitly[derivingIList.Repr =:= (String :: HNil)]
+  val derivingIList = DerivingS[IList[String]].gen
+  implicitly[derivingIList.Repr =:= (String :: HNil)]
 
-  // val derivingdSnoc = DerivingS[Snoc[String]].gen
-  // implicitly[derivingdSnoc.Repr =:= (String :: HNil)]
+  val derivingdSnoc = DerivingS[Snoc[String]].gen
+  implicitly[derivingdSnoc.Repr =:= (String :: HNil)]
 
-  // val derivingdTree = DerivingS[Tree[String]].gen
-  // implicitly[derivingdTree.Repr =:= (String :: HNil)]
+  val derivingdTree = DerivingS[Tree[String]].gen
+  implicitly[derivingdTree.Repr =:= (String :: HNil)]
 }

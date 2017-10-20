@@ -38,7 +38,6 @@ object ADTs {
   case class Dog(age: Long)
   case class Cat(name: String, friend: Either[Cat, Dog])
 
-
   implicit val genDog: Generic[Dog] { type Repr = Long :: HNil } =
     new Generic[Dog] {
       type Repr = Long :: HNil
@@ -57,8 +56,8 @@ object ADTs {
     new Generic[Either[A, B]] {
       type Repr = Left[A, B] :+: Right[A, B] :+: CNil
       def to(t: Either[A, B]): Repr = t match {
-        case x: Left[A, B] => Inl(x)
-        case x: Right[A, B] => Inr(Inl(x))
+        case (x: Left[A, B]  @unchecked) => Inl(x)
+        case (x: Right[A, B] @unchecked) => Inr(Inl(x))
       }
       def from(r: Repr): Either[A, B] = r match {
         case Inl(x) => x
@@ -127,8 +126,8 @@ object ADTs {
     new Generic[IList[A]] {
       type Repr = ICons[A] :+: INil[A] :+: CNil
       def to(t: IList[A]): Repr = t match {
-        case x: ICons[A] => Inl(x)
-        case x: INil[A] => Inr(Inl(x))
+        case (x: ICons[A] @unchecked) => Inl(x)
+        case (x: INil[A]  @unchecked) => Inr(Inl(x))
       }
       def from(r: Repr): IList[A] = r match {
         case Inl(x) => x
@@ -155,8 +154,8 @@ object ADTs {
     new Generic[Snoc[A]] {
       type Repr =  SCons[A] :+: SNil[A] :+: CNil
       def to(t: Snoc[A]): Repr = t match {
-        case x: SCons[A] => Inl(x)
-        case x: SNil[A] => Inr(Inl(x))
+        case (x: SCons[A] @unchecked) => Inl(x)
+        case (x: SNil[A]  @unchecked) => Inr(Inl(x))
       }
       def from(r: Repr): Snoc[A] = r match {
         case Inl(x) => x
@@ -183,8 +182,8 @@ object ADTs {
     new Generic[Tree[A]] {
       type Repr = Leaf[A] :+: Node[A] :+: CNil
       def to(t: Tree[A]): Repr = t match {
-        case x: Leaf[A] => Inl(x)
-        case x: Node[A] => Inr(Inl(x))
+        case (x: Leaf[A] @unchecked) => Inl(x)
+        case (x: Node[A] @unchecked) => Inr(Inl(x))
       }
       def from(r: Repr): Tree[A] = r match {
         case Inl(x) => x

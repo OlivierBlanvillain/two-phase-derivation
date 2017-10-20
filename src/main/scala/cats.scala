@@ -1,12 +1,5 @@
 package deriving
 
-// cats.Later
-class Later[A](val value: () => A)
-
-object Later {
-  def apply[A](value: => A): Later[A] = new Later(() => value)
-}
-
 // cats.Show
 trait Show[A] {
   def show(a: A): String
@@ -40,3 +33,4 @@ object Syntax {
     def coproduct[B](fb: F[B]): F[Either[A, B]] = implicitly[Cocartesian[F]].coproduct(fa, fb)
   }
 }
+

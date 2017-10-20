@@ -8,6 +8,6 @@ object Tests {
     LeavesTests
     NotGenericTests
     NotInTests
-    ()
+    println("Done")
   }
 }

@@ -8,7 +8,7 @@ object Benchmarks { // extends App {
   import ADTs._
   import Instances._
   // import shapeless.test.{compileTime => c}
-  val deriveF = DerivingF[IDAABBS].gen
+  // val deriveF = DerivingF[IDAABBS].gen
 
   // val deriveS = the[DeriveS[IDAABBS]]
 
@@ -27,64 +27,64 @@ object Benchmarks { // extends App {
 
   // Deriving[IDAABBS].gen
 
-  deriveF.materialize[Show]
+  // deriveF.materialize[Show]
 
   // the[DeriveS[IDAABBS]]
 
   // deriveS.materialize[Show]
 
   // the[TShow[IDAABBS]]
+
+  {
+    import DirectShowDerivation._
+    the[Show[Cat]]
+  }
 }
 
-trait TShow[F] {
-  def show(f: F): String
-}
+object DirectShowDerivation {
 
-/** Traditional Shapeless type class derivation */
-object TShow {
-  implicit def fromCatsShow[A](implicit s: Show[A]): TShow[A] =
-    new TShow[A] {
-      def show(a: A): String = s.show(a)
-    }
+  implicit def showGeneric[F, G]
+    (implicit
+      gen: Generic[F] { type Repr = G },
+      sg: => Show[G]
+    ): Show[F] =
+      new Show[F] {
+        def show(f: F) = sg.show(gen.to(f))
+      }
 
-  implicit def showGeneric[F, G](implicit gen: Generic.Aux[F, G], sg: shapeless.Lazy[TShow[G]]): TShow[F] =
-    new TShow[F] {
-      def show(f: F) = sg.value.show(gen.to(f))
-    }
-
-  implicit def showHNil: TShow[HNil] =
-    new TShow[HNil] {
+  implicit def showHNil: Show[HNil] =
+    new Show[HNil] {
       def show(p: HNil): String = ""
     }
 
   implicit def showHCons[H, T <: HList]
     (implicit
-      sv: shapeless.Lazy[TShow[H]],
-      st: shapeless.Lazy[TShow[T]]
-    ): TShow[H :: T] =
-      new TShow[H :: T] {
+      sv: => Show[H],
+      st: => Show[T]
+    ): Show[H :: T] =
+      new Show[H :: T] {
         def show(p: H :: T): String = {
-          val head = sv.value.show(p.head)
-          val tail = st.value.show(p.tail)
+          val head = sv.show(p.head)
+          val tail = st.show(p.tail)
           if(tail.isEmpty) head else s"($head, $tail)"
         }
       }
 
-  implicit def showCNil: TShow[CNil] =
-    new TShow[CNil] {
+  implicit def showCNil: Show[CNil] =
+    new Show[CNil] {
       def show(p: CNil): String = ""
     }
 
   implicit def showCCons[H, T <: Coproduct]
     (implicit
-      sv: shapeless.Lazy[TShow[H]],
-      st: shapeless.Lazy[TShow[T]]
-    ): TShow[H :+: T] =
-      new TShow[H :+: T] {
+      sv: => Show[H],
+      st: => Show[T]
+    ): Show[H :+: T] =
+      new Show[H :+: T] {
         def show(c: H :+: T): String =
           c match {
-            case Inl(l) => s"[case: ${sv.value.show(l)}]"
-            case Inr(r) => st.value.show(r)
+            case Inl(l) => s"[case: ${sv.show(l)}]"
+            case Inr(r) => st.show(r)
           }
       }
 }
