@@ -1,8 +1,9 @@
 package deriving
 
+import ADTs._
+import Instances._
+
 object DeriveSTests {
-  import ADTs._
-  import Instances._
 
   val deriveIDAABBS = DerivingS[IDAABBS].gen
   implicitly[deriveIDAABBS.Repr =:= (Int :: Double :: String :: String :: String :: HNil)]
@@ -31,4 +32,11 @@ object DeriveSTests {
 
   val derivingdTree = DerivingS[Tree[String]].gen
   implicitly[derivingdTree.Repr =:= (String :: HNil)]
+}
+
+case class Foo(i: Int, s: String)
+
+object Foo {
+  val m = DerivingS[Dog].gen
+  implicit val show: Show[Dog] = m.materialize[Show]
 }

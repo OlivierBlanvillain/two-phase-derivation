@@ -42,6 +42,22 @@ trait DeriveS[A, Seen <: HList] {
 /** Second phase of automatic type class derivation for `F[A]`. */
 trait DeriveSBoilerplate {
   // implicit class case1implicits[A, I1]
+  //   (self: DeriveS.Aux[A, I1 :: HNil, HNil]) {
+  //     def materialize[F[_]]: implicit (F[I1], CanDerive[F]) => F[A] =
+  //       self.derive(new LiftS[F, I1 :: HNil] {
+  //         def instances = ::(implicitly[F[I1]], HNil)
+  //            .asInstanceOf[I1 :: HNil]
+  //       }, LiftS.empty, implicitly[CanDerive[F]])
+
+  implicit class case1implicits[A, I1]
+    (self: DeriveS.Aux[A, I1 :: HNil, HNil]) {
+      def materialize[F[_]]
+        (implicit I1: F[I1], c: CanDerive[F]): F[A] =
+          self.derive(new LiftS[F, I1 :: HNil] {
+            def instances = ::(I1, HNil)
+               .asInstanceOf[I1 :: HNil]
+          }, LiftS.empty, c)
+    }
   implicit class case2implicits[A, I1, I2]
     (self: DeriveS.Aux[A, I1 :: I2 :: HNil, HNil]) {
       def materialize[F[_]]
