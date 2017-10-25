@@ -9,8 +9,19 @@ object lib {
   final case class Inr[X, H[_], T[t] <: Sum[t]](tail: T[X]) extends Scons[X, H, T]
   sealed trait Snil[X] extends Sum[X]
 
+
+  implicit class ProductSyntax1[X, T[t] <: Product[t]](t: T[X]) extends AnyVal {
+    def :*:[H[_]](h: H[X]): Pcons[X, H, T] = Pcons(h, t)
+  }
+  implicit class ProductSyntax2[X, H[_], T[t] <: Product[t]](t: Pcons[X, H, T]) extends AnyVal {
+    def :*:[U[_]](h: U[X]): Pcons[X, U, H :*: T] = Pcons(h, t)
+  }
+  object :*: {
+    def unapply[X, H[_], T[t] <: Product[t]](s: Pcons[X, H, T]) = (s.head, s.tail)
+  }
   type :*:[H[_], T[t] <: Product[t]] = [X] => Pcons[X, H, T]
   type :+:[H[_], T[t] <: Sum[t]] = [X] => Scons[X, H, T]
+
   type Id[t] = t
 
   trait Generic[A] {
@@ -43,7 +54,7 @@ trait LowPriorityFunctor {
   implicit def pcons[H[_], T[t] <: Product[t]](implicit h: => Functor[H], t: => Functor[T]): Functor[H :*: T] =
     new Functor[H :*: T] {
       def map[A, B](fa: (H :*: T)[A])(f: A => B): (H :*: T)[B] = {
-        Pcons[B, H, T](h.map(fa.head)(f), t.map(fa.tail)(f))
+        h.map(fa.head)(f) :*: t.map(fa.tail)(f)
       }
     }
 
@@ -51,8 +62,8 @@ trait LowPriorityFunctor {
     new Functor[H :+: T] {
       def map[A, B](fa: (H :+: T)[A])(f: A => B): (H :+: T)[B] = {
         fa match {
-          case Inl(x) => Inl[B, H, T](h.map(x)(f))
-          case Inr(x) => Inr[B, H, T](t.map(x)(f))
+          case Inl(x) => Inl(h.map(x)(f))
+          case Inr(x) => Inr(t.map(x)(f))
         }
       }
     }
@@ -67,17 +78,11 @@ object Functor extends LowPriorityFunctor {
   implicit val pnil: Functor[Pnil] =
     new Functor[Pnil] {
       def map[A, B](fa: Pnil[A])(f: A => B): Pnil[B] = {
-        Pnil[B]()
+        Pnil()
       }
     }
 
   implicit def snil: Functor[Snil] = ???
-
-    // new Functor[Pnil] {
-    //   def map[A, B](fa: Pnil[A])(f: A => B): Pnil[B] = {
-    //     Pnil[B]()
-    //   }
-    // }
 }
 
 object demo {
@@ -91,11 +96,11 @@ object demo {
     type Repr = Id :*: Pnil
 
     def to[T](a: Box[T]): Repr[T] = a match {
-      case Box(x) => Pcons[T, Id, Pnil](x, Pnil[T]())
+      case Box(x) => x :*: Pnil()
     }
 
     def from[T](r: Repr[T]): Box[T] = r match {
-      case Pcons(x, Pnil()) => Box(x)
+      case x :*: Pnil() => Box(x)
     }
   }
 
@@ -134,8 +139,8 @@ object demo {
     type Repr = Non :+: Som :+: Snil
 
     def to[T](a: Opt[T]): Repr[T] = a match {
-      case Non()  => Inl[T, Non, Som :+: Snil](Non())
-      case Som(x) => Inr[T, Non, Som :+: Snil](Inl[T, Som, Snil](Som(x)))
+      case Non()  => Inl(Non())
+      case Som(x) => Inr(Inl(Som(x)))
     }
 
     def from[T](r: Repr[T]): Opt[T] = r match {
@@ -156,7 +161,9 @@ object demo {
     type Repr = Tree :*: Tree :*: Pnil
 
     def to[T](a: Node[T]): Repr[T] = a match {
-      case Node(l, r) => Pcons(l, Pcons(r, Pnil[T]()))
+      case Node(l, r) =>
+        val x = (r :*: Pnil())
+        l :*: x
     }
 
     def from[T](r: Repr[T]): Node[T] = r match {

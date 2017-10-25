@@ -26,6 +26,7 @@ lazy val `deriving-scalac` = project.in(file(".deriving-scalac"))
       "-Ywarn-dead-code",
       "-Ywarn-numeric-widen",
       "-Ywarn-value-discard",
+      "-Ypartial-unification",
       "-Ywarn-unused:imports,patvars,privates,locals",
       "-Xfuture"
     ),
