@@ -64,18 +64,6 @@ object ToHList {
     }
 }
 
-// https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/lazy.scala
-trait LAZY[+T] {
-  val value: T
-}
-
-object LAZY {
-  implicit def apply[T](implicit t: /*=>*/ T): LAZY[T] =
-    new LAZY[T] {
-      lazy val value = t
-    }
-}
-
 // https://github.com/milessabin/shapeless/blob/master/core/src/main/scala/shapeless/typeoperators.scala
 // In Dotty we can remove the <: AnyRef, making this effectifely equivalant to the shapeless macro!
 object the {
