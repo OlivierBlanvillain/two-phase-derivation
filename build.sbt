@@ -1,4 +1,13 @@
+// To compile with Dotty
+
 // scalaVersion := "0.3.0-RC2"
+
+// scalacOptions := Seq(
+//   "-Xmin-implicit-search-depth", "32"
+// )
+
+
+// To compile with scalac
 
 scalaVersion := "2.12.3"
 
